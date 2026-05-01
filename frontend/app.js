@@ -160,19 +160,24 @@ async function doLogin(){
     const b = $('btn-login');
     if(b) { b.disabled=false; b.innerText='Entrar'; }
     
+    // Normaliza o erro para pegar a mensagem
+    const errorMsg = typeof e === 'string' ? e : (e.message || "Erro desconhecido");
+    const errorCode = e.code || 'N/A';
+    const errorStack = e.stack || '';
+
     // Mostra erro técnico no caixote vermelho
     const dBox = $('debug-box');
     const dMsg = $('debug-msg');
     if(dBox && dMsg) {
       dBox.style.display = 'block';
-      dMsg.innerHTML = `<strong>Passo:</strong> Login<br><strong>Erro:</strong> ${e.message}<br><strong>Código:</strong> ${e.code || 'N/A'}<br><strong>Stack:</strong> ${e.stack || ''}`;
+      dMsg.innerHTML = `<strong>Passo:</strong> Login<br><strong>Erro:</strong> ${errorMsg}<br><strong>Código:</strong> ${errorCode}<br><strong>Stack:</strong> ${errorStack}`;
     }
 
-    let msg = e.message;
-    if(e.code === 'auth/invalid-credential') msg = "E-mail ou senha incorretos.";
-    if(e.code === 'auth/network-request-failed') msg = "Erro de conexão com o servidor.";
+    let userFriendlyMsg = errorMsg;
+    if(errorCode === 'auth/invalid-credential') userFriendlyMsg = "E-mail ou senha incorretos.";
+    if(errorCode === 'auth/network-request-failed') userFriendlyMsg = "Erro de conexão com o servidor.";
     
-    toast(msg, "!", "b-red");
+    toast(userFriendlyMsg, "!", "b-red");
   }
 }
 
