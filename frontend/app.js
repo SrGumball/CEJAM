@@ -104,62 +104,47 @@ async function doLogin(){
   const email=$('l-email').value.trim();
   const senha=$('l-senha').value;
   const btn=$('btn-login');
-  $('login-err').classList.remove('show');
-  btn.disabled=true; btn.textContent='Entrando...';
+  const errBox=$('login-err');
+
+  if(!email || !senha) {
+    toast("Preencha todos os campos", "⚠", "b-red");
+    return;
+  }
+
+  errBox.classList.remove('show');
+  btn.disabled=true; 
+  btn.innerHTML='<div class="spinner spinner-sm"></div> Entrando...';
   
   try {
+    console.log("1. Iniciando Autenticação...");
     const { signInWithEmailAndPassword } = await import('https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js');
-    const { getDoc, doc, setDoc, serverTimestamp } = fb;
     
-    console.log("1. Iniciando Auth...");
-
-    // 1. Autenticação
-    let userCred;
-    try {
-      userCred = await signInWithEmailAndPassword(fb.auth, email, senha);
-    } catch (authErr) {
-      console.error("Erro no passo 1:", authErr.code);
-      if (authErr.code === 'auth/invalid-email') throw new Error("E-mail em formato inválido.");
-      if (authErr.code === 'auth/invalid-credential') throw new Error("E-mail ou senha incorretos.");
-      if (authErr.code === 'auth/user-not-found') throw new Error("Usuário não encontrado.");
-      if (authErr.code === 'auth/wrong-password') throw new Error("Senha incorreta.");
-      if (authErr.code === 'auth/too-many-requests') throw new Error("Muitas tentativas. Tente mais tarde.");
-      throw new Error("Falha na autenticação: " + authErr.code);
-    }
-
+    // Autenticação com Timeout de 15 segundos para evitar travamento infinito
+    const loginPromise = signInWithEmailAndPassword(fb.auth, email, senha);
+    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Tempo de conexão esgotado. Verifique sua internet.")), 15000));
+    
+    const userCred = await Promise.race([loginPromise, timeoutPromise]);
     const uid = userCred.user.uid;
 
-    // 2. Buscar Perfil pelo E-mail (Identificador Único no Cejam)
-    let userDoc;
-    try {
-      console.log("3. Buscando perfil para:", email);
-      userDoc = await getDoc(doc(fb.db, "funcionarios", email));
-    } catch (dbErr) {
-      console.error("Erro no passo 3:", dbErr);
-      throw new Error("Erro de permissão no servidor. Verifique as regras do Firestore.");
-    }
+    console.log("2. Buscando Perfil no Banco...");
+    const userDoc = await fb.getDoc(fb.doc(fb.db, "funcionarios", email));
     
     if (userDoc.exists()) {
       currentUser = userDoc.data();
-      currentUser.id = uid; // Vincula o UID da sessão atual
-      console.log("4. Perfil encontrado:", currentUser.nome);
+      currentUser.id = uid;
+      console.log("3. Login com sucesso para:", currentUser.nome);
+      await entrarNoSistema();
     } else {
-      console.log("4. Perfil não existe. Criando admin padrão...");
+      // Caso especial: Criar admin se for o e-mail do dono
       if (email === "alefdias44@cejam.com") {
         currentUser = { id: uid, nome: "Alef Dias", email, cargo: "admin", ativo: true, primeiro_acesso: false };
-        await setDoc(doc(fb.db, "funcionarios", email), { ...currentUser, criado_em: serverTimestamp() });
-        console.log("5. Perfil admin criado!");
+        await fb.setDoc(fb.doc(fb.db, "funcionarios", email), { ...currentUser, criado_em: fb.serverTimestamp() });
+        await entrarNoSistema();
       } else {
-        throw new Error("Usuário autenticado, mas perfil não encontrado no sistema.");
+        throw new Error("Perfil não encontrado no sistema.");
       }
     }
-
-    console.log("6. Entrando no sistema...");
-    await entrarNoSistema();
-    console.log("7. Login concluído com sucesso.");
   } catch(e){
-    console.error("LOG DE ERRO:", e);
-    // Destrava o botão e mostra o erro
     const b = $('btn-login');
     if(b) { b.disabled=false; b.innerText='Entrar'; }
     toast(e.message, "!", "b-red");
