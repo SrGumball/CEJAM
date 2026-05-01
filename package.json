@@ -4,7 +4,8 @@
   "description": "CEJAM - Sistema Hospitalar",
   "scripts": {
     "dev": "tauri dev",
-    "build": "tauri build"
+    "build": "tauri build",
+    "tauri": "tauri"
   },
   "author": "Alef Dias",
   "license": "ISC",
