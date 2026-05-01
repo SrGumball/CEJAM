@@ -46,8 +46,12 @@ async fn cmd_admin_reset_password(email: String, nova_senha: String) -> Result<R
     let key_data = include_str!("../../chave-admin.json");
     
     // 1. Ler a chave do Service Account a partir da string embutida
+    if key_data.trim() == "{}" || key_data.trim().is_empty() {
+        return Err("A chave de administração não foi configurada nos Secrets do GitHub.".to_string());
+    }
+
     let secret = yup_oauth2::parse_service_account_key(key_data)
-        .map_err(|_| "Erro interno na chave de administração. O binário precisa ser recompilado.")?;
+        .map_err(|e| format!("Erro no formato da chave admin: {}. Verifique os Secrets do GitHub.", e))?;
 
     // 2. Criar autenticador para o Google Auth
     let auth = ServiceAccountAuthenticator::builder(secret)
@@ -151,10 +155,17 @@ async fn cmd_login_nativo(email: String, senha: String) -> Result<LoginResponse,
 #[tauri::command]
 async fn cmd_obter_custom_token(uid: String) -> Result<String, String> {
     let key_data = include_str!("../../chave-admin.json");
-    let key_val: serde_json::Value = serde_json::from_str(key_data).map_err(|e| e.to_string())?;
     
-    let client_email = key_val["client_email"].as_str().ok_or("Email do client não encontrado na chave")?;
-    let private_key = key_val["private_key"].as_str().ok_or("Chave privada não encontrada")?;
+    // Verifica se a chave é apenas um JSON vazio (o que acontece se o Secret não estiver no GitHub)
+    if key_data.trim() == "{}" || key_data.trim().is_empty() {
+        return Err("A chave de administração (FIREBASE_ADMIN_KEY) não foi configurada nos Secrets do GitHub. O build não terá acesso total.".to_string());
+    }
+
+    let key_val: serde_json::Value = serde_json::from_str(key_data)
+        .map_err(|e| format!("Erro no formato do arquivo chave-admin.json: {}. Verifique se colou o JSON completo no GitHub.", e))?;
+    
+    let client_email = key_val["client_email"].as_str().ok_or("Campo 'client_email' não encontrado na chave admin.")?;
+    let private_key = key_val["private_key"].as_str().ok_or("Campo 'private_key' não encontrado na chave admin.")?;
 
     let iat = chrono::Utc::now().timestamp() as u64;
     let exp = iat + 3600; // 1 hora de validade
