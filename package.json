@@ -1,0 +1,17 @@
+{
+  "name": "cejam",
+  "version": "1.0.0",
+  "description": "CEJAM - Sistema Hospitalar",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build"
+  },
+  "author": "Alef Dias",
+  "license": "ISC",
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.10.1"
+  },
+  "dependencies": {
+    "firebase": "^12.12.1"
+  }
+}

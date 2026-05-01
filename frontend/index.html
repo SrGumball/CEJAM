@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CEJAM — Sistema Hospitalar</title>
+<meta name="description" content="Sistema de gestão hospitalar CEJAM — controle de pacientes, prescrições, farmácia e enfermagem.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<!-- ═══ TELA LOGIN ═══ -->
+<div class="center-screen" id="sc-login">
+  <div class="center-box">
+    <div class="box-logo">CEJAM</div>
+    <div class="box-sub">SISTEMA HOSPITALAR</div>
+    <div class="fgroup">
+      <label class="flabel">E-mail</label>
+      <input class="finput" type="email" id="l-email" placeholder="seu@email.com" autocomplete="email" />
+    </div>
+    <div class="fgroup">
+      <label class="flabel">Senha</label>
+      <input class="finput" type="password" id="l-senha" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()" />
+    </div>
+    <div class="ferr" id="login-err">E-mail ou senha incorretos.</div>
+    <button class="btn-full" id="btn-login" onclick="doLogin()">Entrar</button>
+    <div class="box-hint">Acesso restrito a funcionários cadastrados</div>
+  </div>
+</div>
+
+<!-- ═══ TELA TROCA DE SENHA (PRIMEIRO ACESSO) ═══ -->
+<div class="center-screen" id="sc-troca" style="display:none">
+  <div class="center-box">
+    <div class="box-logo">CEJAM</div>
+    <div class="box-sub">PRIMEIRO ACESSO</div>
+    <div class="box-title">Crie sua nova senha</div>
+    <div class="box-desc">Por segurança, você precisa criar uma senha pessoal antes de continuar.</div>
+    <div class="fgroup">
+      <label class="flabel">Nova Senha</label>
+      <input class="finput" type="password" id="t-nova" placeholder="Mínimo 6 caracteres" />
+    </div>
+    <div class="fgroup">
+      <label class="flabel">Confirmar Senha</label>
+      <input class="finput" type="password" id="t-conf" placeholder="Repita a senha" onkeydown="if(event.key==='Enter')trocarSenha()" />
+    </div>
+    <div class="ferr" id="troca-err">As senhas não coincidem ou são muito curtas.</div>
+    <button class="btn-full" onclick="trocarSenha()">✓ Confirmar e Entrar</button>
+  </div>
+</div>
+
+<!-- ═══ APP ═══ -->
+<div class="app" id="app" style="display:none">
+  <aside class="sidebar">
+    <div class="sb-logo">
+      <div class="sb-logo-mark">CEJAM</div>
+      <div class="sb-logo-sub">SISTEMA HOSPITALAR</div>
+    </div>
+    <div class="sb-user">
+      <div class="sb-avatar" id="sb-av"></div>
+      <div>
+        <div class="sb-uname" id="sb-name"></div>
+        <div class="sb-urole" id="sb-role"></div>
+      </div>
+      <button class="sb-logout" onclick="doLogout()" title="Sair">⏻</button>
+    </div>
+    <nav id="sb-nav"></nav>
+    <div class="sb-footer" id="sb-clock">● Online</div>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="topbar-title">Dashboard</div>
+      <input class="topbar-search" placeholder="🔍 Buscar paciente..." id="search-input" oninput="handleSearch()" />
+      <button class="btn btn-primary" id="btn-top" onclick="handleTopBtn()">+ Novo</button>
+    </div>
+    <div class="content" id="content">
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <div>Carregando...</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ═══ MODAIS ═══ -->
+
+<!-- Admitir Paciente -->
+<div class="modal-overlay" id="m-pac">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">👤 Admitir Paciente</div><button class="modal-close" onclick="cm('m-pac')">✕</button></div>
+    <div class="modal-body">
+      <div class="fg">
+        <div class="fgrp ff"><label class="flabel">Nome Completo</label><input class="fi" id="p-nome" placeholder="Nome do paciente"/></div>
+        <div class="fgrp"><label class="flabel">Data de Nascimento</label><input class="fi" type="date" id="p-nasc"/></div>
+        <div class="fgrp"><label class="flabel">Leito</label><input class="fi" id="p-leito" placeholder="Ex: A-04"/></div>
+        <div class="fgrp ff"><label class="flabel">Diagnóstico Principal</label>
+          <select class="fs" id="p-diag">
+            <option>Dependência de Álcool (CID F10)</option><option>Dependência de Cocaína (CID F14)</option>
+            <option>Dependência de Opioides (CID F11)</option><option>Dependência de Cannabis (CID F12)</option>
+            <option>Transtorno Uso Múltiplas Substâncias (CID F19)</option>
+          </select>
+        </div>
+        <div class="fgrp ff"><label class="flabel">Alergias</label><input class="fi" id="p-alerg" placeholder="Ex: Penicilina — ou NKDA"/></div>
+        <div class="fgrp ff"><label class="flabel">Observações na Admissão</label><textarea class="ft" id="p-obs" placeholder="Estado geral, sinais vitais iniciais..."></textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-outline" onclick="cm('m-pac')">Cancelar</button><button class="btn btn-primary" onclick="salvarPac()">✓ Admitir</button></div>
+  </div>
+</div>
+
+<!-- Nova Prescrição -->
+<div class="modal-overlay" id="m-rx">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">📋 Nova Prescrição</div><button class="modal-close" onclick="cm('m-rx')">✕</button></div>
+    <div class="modal-body">
+      <div class="fg">
+        <div class="fgrp"><label class="flabel">Paciente</label><select class="fs" id="rx-pac"></select></div>
+        <div class="fgrp"><label class="flabel">Medicamento</label>
+          <input class="fi" id="rx-med" list="lista-meds" placeholder="Digite ou selecione o medicamento"/>
+          <datalist id="lista-meds">
+            <option value="Diazepam 10mg"></option><option value="Clonidina 0,1mg"></option><option value="Metadona 10mg"></option>
+            <option value="Naltrexona 50mg"></option><option value="Buprenorfina 8mg"></option><option value="Carbamazepina 200mg"></option>
+            <option value="Olanzapina 5mg"></option><option value="Tiamina 300mg"></option><option value="Haloperidol 5mg"></option><option value="Lorazepam 2mg"></option>
+          </datalist>
+        </div>
+        <div class="fgrp"><label class="flabel">Via</label>
+          <select class="fs" id="rx-via"><option>Oral (VO)</option><option>Intravenosa (IV)</option><option>Intramuscular (IM)</option><option>Sublingual (SL)</option></select>
+        </div>
+        <div class="fgrp"><label class="flabel">Dose</label><input class="fi" id="rx-dose" placeholder="Ex: 10mg"/></div>
+        <div class="fgrp"><label class="flabel">Frequência</label>
+          <select class="fs" id="rx-freq"><option>1x ao dia (24/24h)</option><option>2x ao dia (12/12h)</option><option>3x ao dia (8/8h)</option><option>4x ao dia (6/6h)</option><option>Se necessário (SN)</option></select>
+        </div>
+        <div class="fgrp"><label class="flabel">Duração</label><input class="fi" id="rx-dur" placeholder="Ex: 7 dias"/></div>
+        <div class="fgrp ff"><label class="flabel">Observações</label><textarea class="ft" id="rx-obs" placeholder="Cuidados, interações..."></textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-outline" onclick="cm('m-rx')">Cancelar</button><button class="btn btn-primary" onclick="salvarRx()">✓ Prescrever</button></div>
+  </div>
+</div>
+
+<!-- Alterar Prescrição -->
+<div class="modal-overlay" id="m-rx-edit">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">✏️ Alterar Prescrição</div><button class="modal-close" onclick="cm('m-rx-edit')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="rxe-id"/>
+      <div class="fg">
+        <div class="fgrp ff"><label class="flabel">Medicamento</label><input class="fi" id="rxe-med" disabled style="background:var(--surface2)"/></div>
+        <div class="fgrp"><label class="flabel">Nova Dose</label><input class="fi" id="rxe-dose" placeholder="Ex: 10mg"/></div>
+        <div class="fgrp"><label class="flabel">Nova Frequência</label>
+          <select class="fs" id="rxe-freq">
+            <option>1x ao dia (24/24h)</option>
+            <option>2x ao dia (12/12h)</option>
+            <option>3x ao dia (8/8h)</option>
+            <option>4x ao dia (6/6h)</option>
+            <option>Se necessário (SN)</option>
+          </select>
+        </div>
+        <div class="fgrp"><label class="flabel">Nova Duração</label><input class="fi" id="rxe-dur" placeholder="Ex: 7 dias"/></div>
+        <div class="fgrp ff"><label class="flabel">Novas Observações</label><textarea class="ft" id="rxe-obs" placeholder="Motivo da alteração..."></textarea></div>
+      </div>
+      <div class="alert a-warn" style="margin-top:14px;display:block">
+        ⚠️ Atenção: Ao alterar, a prescrição voltará para a fila de Dispensação da Farmácia.
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-outline" onclick="cm('m-rx-edit')">Cancelar</button><button class="btn btn-primary" onclick="salvarAlteracaoRx()">✓ Salvar e Reativar</button></div>
+  </div>
+</div>
+
+<!-- Alta -->
+<div class="modal-overlay" id="m-alta">
+  <div class="modal modal-sm">
+    <div class="modal-head"><div class="modal-title">🏠 Alta Médica</div><button class="modal-close" onclick="cm('m-alta')">✕</button></div>
+    <div class="modal-body">
+      <div id="alta-info"></div>
+      <div class="fgrp" style="margin-top:12px"><label class="flabel">Tipo de Alta</label>
+        <select class="fs" id="alta-tipo"><option>Alta Hospitalar — Melhora clínica</option><option>Alta a pedido do paciente</option><option>Alta para tratamento ambulatorial</option><option>Transferência</option></select>
+      </div>
+      <div class="fgrp" style="margin-top:12px"><label class="flabel">Resumo / Orientações</label><textarea class="ft" id="alta-resumo" placeholder="Medicamentos de uso domiciliar, retorno..."></textarea></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-outline" onclick="cm('m-alta')">Cancelar</button><button class="btn btn-red" onclick="confirmarAlta()">✓ Confirmar Alta</button></div>
+  </div>
+</div>
+
+<!-- Dispensar -->
+<div class="modal-overlay" id="m-disp">
+  <div class="modal modal-sm">
+    <div class="modal-head"><div class="modal-title">💊 Confirmar Dispensação</div><button class="modal-close" onclick="cm('m-disp')">✕</button></div>
+    <div class="modal-body" id="disp-body"></div>
+    <div class="modal-foot"><button class="btn btn-outline" onclick="cm('m-disp')">Cancelar</button><button class="btn btn-green" onclick="confirmarDisp()">✓ Dispensar</button></div>
+  </div>
+</div>
+
+<!-- Administrar -->
+<div class="modal-overlay" id="m-adm">
+  <div class="modal modal-sm">
+    <div class="modal-head"><div class="modal-title">🩺 Registrar Administração</div><button class="modal-close" onclick="cm('m-adm')">✕</button></div>
+    <div class="modal-body" id="adm-body"></div>
+    <div class="modal-foot"><button class="btn btn-outline" onclick="cm('m-adm')">Cancelar</button><button class="btn btn-primary" onclick="confirmarAdm()">✓ Registrar</button></div>
+  </div>
+</div>
+
+<!-- Relatório de Enfermagem -->
+<div class="modal-overlay" id="m-relat">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">📝 Relatório de Enfermagem</div><button class="modal-close" onclick="cm('m-relat')">✕</button></div>
+    <div class="modal-body">
+      <div class="fg">
+        <div class="fgrp"><label class="flabel">Paciente</label><select class="fs" id="r-pac"></select></div>
+        <div class="fgrp"><label class="flabel">Turno</label>
+          <select class="fs" id="r-turno"><option>Manhã (07h–15h)</option><option>Tarde (15h–23h)</option><option>Noite (23h–07h)</option></select>
+        </div>
+        <div class="fgrp"><label class="flabel">PA (mmHg)</label><input class="fi" id="r-pa" placeholder="120/80"/></div>
+        <div class="fgrp"><label class="flabel">FC (bpm)</label><input class="fi" id="r-fc" placeholder="80"/></div>
+        <div class="fgrp"><label class="flabel">Temp. (°C)</label><input class="fi" id="r-temp" placeholder="36.5"/></div>
+        <div class="fgrp"><label class="flabel">SpO2 (%)</label><input class="fi" id="r-spo2" placeholder="98"/></div>
+        <div class="fgrp ff"><label class="flabel">Estado Geral</label>
+          <select class="fs" id="r-estado"><option>Bom estado geral (BEG)</option><option>Regular estado geral (REG)</option><option>Mau estado geral (MEG)</option></select>
+        </div>
+        <div class="fgrp ff"><label class="flabel">Evolução / Observações</label><textarea class="ft" id="r-obs" style="min-height:80px" placeholder="Estado do paciente, comportamento..."></textarea></div>
+        <div class="fgrp ff"><label class="flabel">Intercorrências</label><textarea class="ft" id="r-inter" placeholder="Quedas, agitação, recusa de medicação..."></textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-outline" onclick="cm('m-relat')">Cancelar</button><button class="btn btn-primary" onclick="salvarRelat()">✓ Salvar</button></div>
+  </div>
+</div>
+
+<!-- Cadastrar Funcionário -->
+<div class="modal-overlay" id="m-func">
+  <div class="modal modal-sm">
+    <div class="modal-head"><div class="modal-title">👥 Cadastrar Funcionário</div><button class="modal-close" onclick="cm('m-func')">✕</button></div>
+    <div class="modal-body">
+      <div class="fg">
+        <div class="fgrp ff"><label class="flabel">Nome Completo</label><input class="fi" id="f-nome" placeholder="Nome do funcionário" oninput="gerarSenhaAuto()"/></div>
+        <div class="fgrp ff"><label class="flabel">E-mail (login)</label><input class="fi" id="f-email" placeholder="email@cejam.com" type="email"/></div>
+        <div class="fgrp"><label class="flabel">Cargo</label>
+          <select class="fs" id="f-cargo">
+            <option value="medico">Médico</option>
+            <option value="farmacia">Farmacêutico</option>
+            <option value="enfermagem">Enfermeiro</option>
+            <option value="tecnico">Técnico de Enfermagem</option>
+          </select>
+        </div>
+        <div class="fgrp"><label class="flabel">Data de Nascimento</label><input class="fi" id="f-nasc" type="date" oninput="gerarSenhaAuto()"/></div>
+        <div class="fgrp ff"><label class="flabel">Registro Profissional</label><input class="fi" id="f-reg" placeholder="CRM / CRF / COREN"/></div>
+      </div>
+      <div style="margin-top:14px">
+        <label class="flabel" style="margin-bottom:6px;display:block">Senha gerada automaticamente</label>
+        <div class="senha-gerada" id="senha-preview">—</div>
+        <div class="senha-hint">Gerada com base no primeiro nome + data de nascimento completa.<br>O funcionário deverá trocá-la no primeiro acesso.</div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-outline" onclick="cm('m-func')">Cancelar</button><button class="btn btn-primary" onclick="salvarFunc()">✓ Cadastrar</button></div>
+  </div>
+</div>
+
+<!-- Ver Relatórios -->
+<div class="modal-overlay" id="m-verrelat">
+  <div class="modal modal-lg">
+    <div class="modal-head"><div class="modal-title">📋 Relatórios do Paciente</div><button class="modal-close" onclick="cm('m-verrelat')">✕</button></div>
+    <div class="modal-body" id="verrelat-body"></div>
+    <div class="modal-foot"><button class="btn btn-outline" onclick="cm('m-verrelat')">Fechar</button></div>
+  </div>
+</div>
+<!-- Primeiro Acesso / Segurança -->
+<div class="modal-overlay" id="m-primeiro-acesso">
+  <div class="modal modal-sm">
+    <div class="modal-head"><div class="modal-title">🛡️ Segurança do Acesso</div></div>
+    <div class="modal-body">
+      <div class="alert a-info" style="display:block;margin-bottom:15px">
+        Esta é uma senha temporária. Por segurança, você precisa criar uma nova senha pessoal agora.
+      </div>
+      <div class="fg">
+        <div class="fgrp ff"><label class="flabel">Nova Senha</label><input class="fi" id="pa-senha1" type="password" placeholder="Mínimo 6 caracteres"/></div>
+        <div class="fgrp ff"><label class="flabel">Confirme a Senha</label><input class="fi" id="pa-senha2" type="password" placeholder="Repita a nova senha"/></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" style="width:100%" onclick="salvarNovaSenha()">✓ Salvar e Entrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Detalhe Prescrição -->
+<div class="modal-overlay" id="m-rxdet">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">📋 Detalhes da Prescrição</div><button class="modal-close" onclick="cm('m-rxdet')">✕</button></div>
+    <div class="modal-body" id="rxdet-body"></div>
+    <div class="modal-foot"><button class="btn btn-outline" onclick="cm('m-rxdet')">Fechar</button></div>
+  </div>
+</div>
+
+<!-- Detalhe Funcionário -->
+<div class="modal-overlay" id="m-func-det">
+  <div class="modal modal-sm">
+    <div class="modal-head"><div class="modal-title">👤 Perfil do Funcionário</div><button class="modal-close" onclick="cm('m-func-det')">✕</button></div>
+    <div class="modal-body" id="funcdet-body"></div>
+    <div class="modal-foot" style="flex-direction:column;gap:10px;align-items:stretch">
+      <div class="fgrp" style="margin:0"><label class="flabel">Nova Senha Solicitada</label><input class="fi" id="f-nova-senha" type="text" placeholder="Digite a nova senha aqui"/></div>
+      <button class="btn btn-green" onclick="confirmarAlterarSenhaManual()">✓ Alterar Senha Agora</button>
+      <button class="btn btn-primary" onclick="cm('m-func-det')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-area" id="toast-area"></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MedCare</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1c2128;--border:#30363d;
+  --text:#e6edf3;--text2:#8b949e;--text3:#484f58;
+  --blue:#2f81f7;--blue-dim:#1a4a8a;
+  --green:#3fb950;--green-dim:#1a4a2a;
+  --yellow:#d29922;--yellow-dim:#4a3a10;
+  --red:#f85149;--red-dim:#4a1a1a;
+  --purple:#a371f7;--purple-dim:#3a1a6a;
+  --orange:#f0883e;--orange-dim:#4a2a10;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* ── TELAS CENTRAIS ── */
+.center-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;}
+.center-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:40px;width:400px;max-width:95vw;}
+.box-logo{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;color:var(--blue);letter-spacing:3px;text-align:center;}
+.box-sub{font-size:10px;color:var(--text3);margin-top:3px;letter-spacing:2px;text-align:center;margin-bottom:32px;}
+.box-title{font-size:15px;font-weight:600;margin-bottom:6px;}
+.box-desc{font-size:12px;color:var(--text3);margin-bottom:22px;}
+.flabel{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1.2px;font-family:'IBM Plex Mono',monospace;display:block;margin-bottom:5px;}
+.finput,.fselect,.ftextarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:10px 14px;color:var(--text);font-size:13px;font-family:'IBM Plex Sans',sans-serif;outline:none;transition:.15s;}
+.finput:focus,.fselect:focus,.ftextarea:focus{border-color:var(--blue);}
+.ftextarea{resize:vertical;min-height:70px;}
+.fselect option{background:var(--surface2);}
+.fgroup{margin-bottom:14px;}
+.ferr{color:var(--red);font-size:11px;margin-bottom:12px;display:none;}
+.ferr.show{display:block;}
+.btn-full{width:100%;padding:12px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;transition:.15s;margin-top:4px;}
+.btn-full:hover{background:#388bfd;}
+.box-hint{font-size:10px;color:var(--text3);margin-top:16px;text-align:center;}
+.senha-gerada{background:var(--bg);border:1px solid var(--blue-dim);border-radius:6px;padding:10px 14px;font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--blue);text-align:center;letter-spacing:1px;margin:10px 0;}
+.senha-hint{font-size:11px;color:var(--text3);text-align:center;}
+
+/* ── LAYOUT ── */
+.app{display:flex;min-height:100vh;}
+.sidebar{width:224px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;height:100vh;z-index:100;}
+.main{margin-left:224px;flex:1;display:flex;flex-direction:column;min-height:100vh;}
+
+/* ── SIDEBAR ── */
+.sb-logo{padding:18px 16px 14px;border-bottom:1px solid var(--border);}
+.sb-logo-mark{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:var(--blue);letter-spacing:2px;}
+.sb-logo-sub{font-size:9px;color:var(--text3);margin-top:2px;letter-spacing:1px;}
+.sb-user{padding:12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.sb-avatar{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.sb-uname{font-size:12px;font-weight:500;}
+.sb-urole{font-size:9px;margin-top:2px;}
+.sb-logout{margin-left:auto;background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:4px 6px;border-radius:4px;}
+.sb-logout:hover{color:var(--red);background:var(--red-dim);}
+nav{padding:10px 0;flex:1;overflow-y:auto;}
+.nav-sec{padding:8px 14px 3px;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;font-family:'IBM Plex Mono',monospace;}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 14px;cursor:pointer;color:var(--text2);font-size:13px;border-left:2px solid transparent;transition:.15s;}
+.nav-item:hover{color:var(--text);background:rgba(47,129,247,.06);}
+.nav-item.active{color:var(--blue);border-left-color:var(--blue);background:rgba(47,129,247,.08);}
+.nav-icon{width:16px;text-align:center;font-size:14px;}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;font-family:'IBM Plex Mono',monospace;}
+.sb-footer{padding:10px 14px;border-top:1px solid var(--border);font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace;}
+
+/* ── TOPBAR ── */
+.topbar{height:52px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 22px;gap:12px;position:sticky;top:0;z-index:50;}
+.topbar-title{font-size:14px;font-weight:500;flex:1;}
+.topbar-search{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 12px;color:var(--text);font-size:12px;width:200px;font-family:'IBM Plex Sans',sans-serif;outline:none;}
+.topbar-search:focus{border-color:var(--blue);}
+.topbar-search::placeholder{color:var(--text3);}
+.content{padding:22px;flex:1;}
+
+/* ── BOTÕES ── */
+.btn{padding:7px 14px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;border:none;font-family:'IBM Plex Sans',sans-serif;transition:.15s;}
+.btn-primary{background:var(--blue);color:#fff;}.btn-primary:hover{background:#388bfd;}
+.btn-outline{background:transparent;color:var(--text2);border:1px solid var(--border);}.btn-outline:hover{color:var(--text);border-color:var(--text2);}
+.btn-green{background:var(--green);color:#0d1117;}.btn-green:hover{background:#56d364;}
+.btn-red{background:var(--red);color:#fff;}.btn-red:hover{background:#ff6b6b;}
+.btn-sm{padding:4px 10px;font-size:11px;}
+.btn-xs{padding:3px 8px;font-size:10px;}
+
+/* ── STATS ── */
+.sg4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+.sg3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px;}
+.sg2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;}
+.stat-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1.2px;font-family:'IBM Plex Mono',monospace;margin-bottom:8px;}
+.stat-val{font-size:26px;font-weight:600;font-family:'IBM Plex Mono',monospace;line-height:1;}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:4px;}
+
+/* ── TABLE ── */
+.tcard{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:18px;}
+.thead-row{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.ttitle{font-size:13px;font-weight:500;}
+table{width:100%;border-collapse:collapse;}
+th{padding:8px 14px;text-align:left;font-size:9px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:1.2px;font-family:'IBM Plex Mono',monospace;border-bottom:1px solid var(--border);background:var(--surface2);}
+td{padding:10px 14px;font-size:12px;color:var(--text2);border-bottom:1px solid rgba(48,54,61,.5);}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(47,129,247,.03);color:var(--text);}
+.mono{font-family:'IBM Plex Mono',monospace;font-size:11px;}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:4px;font-size:10px;font-family:'IBM Plex Mono',monospace;font-weight:500;}
+.b-blue{background:var(--blue-dim);color:var(--blue);}
+.b-green{background:var(--green-dim);color:var(--green);}
+.b-yellow{background:var(--yellow-dim);color:var(--yellow);}
+.b-red{background:var(--red-dim);color:var(--red);}
+.b-purple{background:var(--purple-dim);color:var(--purple);}
+.b-gray{background:rgba(48,54,61,.6);color:var(--text3);}
+.b-orange{background:var(--orange-dim);color:var(--orange);}
+.dias-badge{display:inline-block;padding:3px 8px;border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;}
+.d-ok{background:var(--green-dim);color:var(--green);}
+.d-med{background:var(--yellow-dim);color:var(--yellow);}
+.d-long{background:var(--red-dim);color:var(--red);}
+
+/* ── SEC HEADER ── */
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+.sec-title{font-size:16px;font-weight:600;}
+.sec-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+.sec-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;display:none;align-items:center;justify-content:center;backdrop-filter:blur(2px);}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:10px;width:580px;max-width:96vw;max-height:92vh;overflow-y:auto;}
+.modal-sm{width:440px;}.modal-lg{width:720px;}
+.modal-head{padding:15px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-title{font-size:14px;font-weight:500;}
+.modal-close{background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:2px 6px;border-radius:4px;}
+.modal-close:hover{color:var(--text);background:var(--surface2);}
+.modal-body{padding:20px;}
+.modal-foot{padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;}
+
+/* ── FORM GRID ── */
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:13px;}
+.ff{grid-column:1/-1;}
+.fgrp{display:flex;flex-direction:column;gap:5px;}
+.fi,.fs,.ft{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-size:12px;font-family:'IBM Plex Sans',sans-serif;outline:none;}
+.fi:focus,.fs:focus,.ft:focus{border-color:var(--blue);}
+.ft{resize:vertical;min-height:70px;}
+.fs option{background:var(--surface2);}
+
+/* ── ALERTS ── */
+.alert{padding:10px 14px;border-radius:6px;font-size:12px;margin-bottom:14px;display:flex;align-items:flex-start;gap:10px;}
+.a-warn{background:var(--yellow-dim);border:1px solid rgba(210,153,34,.3);color:#e3b341;}
+.a-info{background:var(--blue-dim);border:1px solid rgba(47,129,247,.3);color:var(--blue);}
+.a-ok{background:var(--green-dim);border:1px solid rgba(63,185,80,.3);color:var(--green);}
+
+/* ── DETAIL ── */
+.drow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;}
+.drow:last-child{border-bottom:none;}
+.dkey{color:var(--text3);}
+.dval{color:var(--text);font-weight:500;}
+
+/* ── PAC HDR ── */
+.pac-hdr{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+.pac-av{width:40px;height:40px;background:var(--blue-dim);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:var(--blue);font-family:'IBM Plex Mono',monospace;flex-shrink:0;}
+.pac-name{font-size:14px;font-weight:600;}
+.pac-info{font-size:11px;color:var(--text3);margin-top:2px;}
+
+/* ── TIMELINE ── */
+.tl-item{display:flex;gap:12px;padding:6px 0;}
+.tl-dot{width:8px;height:8px;border-radius:50%;margin-top:4px;flex-shrink:0;}
+.tl-txt{font-size:12px;}
+.tl-time{font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace;}
+
+/* ── FUNC CARD ── */
+.func-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+.func-av{width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+.func-name{font-size:13px;font-weight:500;}
+.func-info{font-size:11px;color:var(--text3);margin-top:2px;}
+.func-actions{margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+
+/* ── RELAT CARD ── */
+.rc{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:12px;}
+.rc-title{font-size:12px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+
+/* ── TOAST ── */
+.toast-area{position:fixed;bottom:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:8px;}
+.toast{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:11px 15px;font-size:12px;color:var(--text);min-width:230px;box-shadow:0 4px 16px rgba(0,0,0,.4);animation:slideIn .2s ease;display:flex;align-items:center;gap:10px;}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px);}}
+</style>
+</head>
+<body>
+
+<!-- ═══ TELA LOGIN ═══ -->
+<div class="center-screen" id="sc-login">
+  <div class="center-box">
+    <div class="box-logo">MEDCARE</div>
+    <div class="box-sub">SISTEMA HOSPITALAR</div>
+    <div class="fgroup">
+      <label class="flabel">E-mail</label>
+      <input class="finput" type="email" id="l-email" placeholder="seu@email.com" />
+    </div>
+    <div class="fgroup">
+      <label class="flabel">Senha</label>
+      <input class="finput" type="password" id="l-senha" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" />
+    </div>
+    <div class="ferr" id="login-err">E-mail ou senha incorretos.</div>
+    <button class="btn-full" onclick="doLogin()">Entrar</button>
+    <div class="box-hint">Acesso restrito a funcionários cadastrados</div>
+  </div>
+</div>
+
+<!-- ═══ TELA TROCA DE SENHA (PRIMEIRO ACESSO) ═══ -->
+<div class="center-screen" id="sc-troca" style="display:none">
+  <div class="center-box">
+    <div class="box-logo">MEDCARE</div>
+    <div class="box-sub">PRIMEIRO ACESSO</div>
+    <div class="box-title">Crie sua nova senha</div>
+    <div class="box-desc">Por segurança, você precisa criar uma senha pessoal antes de continuar.</div>
+    <div class="fgroup">
+      <label class="flabel">Nova Senha</label>
+      <input class="finput" type="password" id="t-nova" placeholder="Mínimo 6 caracteres" />
+    </div>
+    <div class="fgroup">
+      <label class="flabel">Confirmar Senha</label>
+      <input class="finput" type="password" id="t-conf" placeholder="Repita a senha" onkeydown="if(event.key==='Enter')trocarSenha()" />
+    </div>
+    <div class="ferr" id="troca-err">As senhas não coincidem ou são muito curtas.</div>
+    <button class="btn-full" onclick="trocarSenha()">✓ Confirmar e Entrar</button>
+  </div>
+</div>
+
+<!-- ═══ APP ═══ -->
+<div class="app" id="app" style="display:none">
+  <aside class="sidebar">
+    <div class="sb-logo">
+      <div class="sb-logo-mark">MEDCARE</div>
+      <div class="sb-logo-sub">SISTEMA HOSPITALAR</div>
+    </div>
+    <div class="sb-user">
+      <div class="sb-avatar" id="sb-av"></div>
+      <div>
+        <div class="sb-uname" id="sb-name"></div>
+        <div class="sb-urole" id="sb-role"></div>
+      </div>
+      <button class="sb-logout" onclick="doLogout()" title="Sair">⏻</button>
+    </div>
+    <nav id="sb-nav"></nav>
+    <div class="sb-footer">● Online · 28 Abr 2026</div>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="topbar-title">Dashboard</div>
+      <input class="topbar-search" placeholder="🔍 Buscar paciente..." id="search-input" oninput="handleSearch()" />
+      <button class="btn btn-primary" id="btn-top" onclick="handleTopBtn()">+ Novo</button>
+    </div>
+    <div class="content" id="content"></div>
+  </main>
+</div>
+
+<!-- ═══ MODAIS ═══ -->
+
+<!-- Admitir Paciente -->
+<div class="modal-overlay" id="m-pac">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">👤 Admitir Paciente</div><button class="modal-close" onclick="cm('m-pac')">✕</button></div>
+    <div class="modal-body">
+      <div class="fg">
+        <div class="fgrp ff"><label class="flabel">Nome Completo</label><input class="fi" id="p-nome" placeholder="Nome do paciente"/></div>
+        <div class="fgrp"><label class="flabel">Data de Nascimento</label><input class="fi" type="date" id="p-nasc"/></div>
+        <div class="fgrp"><label class="flabel">Leito</label><input class="fi" id="p-leito" placeholder="Ex: A-04"/></div>
+        <div class="fgrp ff"><label class="flabel">Diagnóstico Principal</label>
+          <select class="fs" id="p-diag">
+            <option>Dependência de Álcool (CID F10)</option><option>Dependência de Cocaína (CID F14)</option>
+            <option>Dependência de Opioides (CID F11)</option><option>Dependência de Cannabis (CID F12)</option>
+            <option>Transtorno Uso Múltiplas Substâncias (CID F19)</option>
+          </select>
+        </div>
+        <div class="fgrp ff"><label class="flabel">Alergias</label><input class="fi" id="p-alerg" placeholder="Ex: Penicilina — ou NKDA"/></div>
+        <div class="fgrp ff"><label class="flabel">Observações na Admissão</label><textarea class="ft" id="p-obs" placeholder="Estado geral, sinais vitais iniciais..."></textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-outline" onclick="cm('m-pac')">Cancelar</button><button class="btn btn-primary" onclick="salvarPac()">✓ Admitir</button></div>
+  </div>
+</div>
+
+<!-- Nova Prescrição -->
+<div class="modal-overlay" id="m-rx">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">📋 Nova Prescrição</div><button class="modal-close" onclick="cm('m-rx')">✕</button></div>
+    <div class="modal-body">
+      <div class="fg">
+        <div class="fgrp"><label class="flabel">Paciente</label><select class="fs" id="rx-pac"></select></div>
+        <div class="fgrp"><label class="flabel">Medicamento</label>
+          <select class="fs" id="rx-med">
+            <option>Diazepam 10mg</option><option>Clonidina 0,1mg</option><option>Metadona 10mg</option>
+            <option>Naltrexona 50mg</option><option>Buprenorfina 8mg</option><option>Carbamazepina 200mg</option>
+            <option>Olanzapina 5mg</option><option>Tiamina 300mg</option><option>Haloperidol 5mg</option><option>Lorazepam 2mg</option>
+          </select>
+        </div>
+        <div class="fgrp"><label class="flabel">Via</label>
+          <select class="fs" id="rx-via"><option>Oral (VO)</option><option>Intravenosa (IV)</option><option>Intramuscular (IM)</option><option>Sublingual (SL)</option></select>
+        </div>
+        <div class="fgrp"><label class="flabel">Dose</label><input class="fi" id="rx-dose" placeholder="Ex: 10mg"/></div>
+        <div class="fgrp"><label class="flabel">Frequência</label>
+          <select class="fs" id="rx-freq"><option>1x ao dia (24/24h)</option><option>2x ao dia (12/12h)</option><option>3x ao dia (8/8h)</option><option>4x ao dia (6/6h)</option><option>Se necessário (SN)</option></select>
+        </div>
+        <div class="fgrp"><label class="flabel">Duração</label><input class="fi" id="rx-dur" placeholder="Ex: 7 dias"/></div>
+        <div class="fgrp ff"><label class="flabel">Observações</label><textarea class="ft" id="rx-obs" placeholder="Cuidados, interações..."></textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-outline" onclick="cm('m-rx')">Cancelar</button><button class="btn btn-primary" onclick="salvarRx()">✓ Prescrever</button></div>
+  </div>
+</div>
+
+<!-- Alta -->
+<div class="modal-overlay" id="m-alta">
+  <div class="modal modal-sm">
+    <div class="modal-head"><div class="modal-title">🏠 Alta Médica</div><button class="modal-close" onclick="cm('m-alta')">✕</button></div>
+    <div class="modal-body">
+      <div id="alta-info"></div>
+      <div class="fgrp" style="margin-top:12px"><label class="flabel">Tipo de Alta</label>
+        <select class="fs" id="alta-tipo"><option>Alta Hospitalar — Melhora clínica</option><option>Alta a pedido do paciente</option><option>Alta para tratamento ambulatorial</option><option>Transferência</option></select>
+      </div>
+      <div class="fgrp" style="margin-top:12px"><label class="flabel">Resumo / Orientações</label><textarea class="ft" id="alta-resumo" placeholder="Medicamentos de uso domiciliar, retorno..."></textarea></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-outline" onclick="cm('m-alta')">Cancelar</button><button class="btn btn-red" onclick="confirmarAlta()">✓ Confirmar Alta</button></div>
+  </div>
+</div>
+
+<!-- Dispensar -->
+<div class="modal-overlay" id="m-disp">
+  <div class="modal modal-sm">
+    <div class="modal-head"><div class="modal-title">💊 Confirmar Dispensação</div><button class="modal-close" onclick="cm('m-disp')">✕</button></div>
+    <div class="modal-body" id="disp-body"></div>
+    <div class="modal-foot"><button class="btn btn-outline" onclick="cm('m-disp')">Cancelar</button><button class="btn btn-green" onclick="confirmarDisp()">✓ Dispensar</button></div>
+  </div>
+</div>
+
+<!-- Administrar -->
+<div class="modal-overlay" id="m-adm">
+  <div class="modal modal-sm">
+    <div class="modal-head"><div class="modal-title">🩺 Registrar Administração</div><button class="modal-close" onclick="cm('m-adm')">✕</button></div>
+    <div class="modal-body" id="adm-body"></div>
+    <div class="modal-foot"><button class="btn btn-outline" onclick="cm('m-adm')">Cancelar</button><button class="btn btn-primary" onclick="confirmarAdm()">✓ Registrar</button></div>
+  </div>
+</div>
+
+<!-- Relatório Diário -->
+<div class="modal-overlay" id="m-relat">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">📝 Relatório de Enfermagem</div><button class="modal-close" onclick="cm('m-relat')">✕</button></div>
+    <div class="modal-body">
+      <div class="fg">
+        <div class="fgrp"><label class="flabel">Paciente</label><select class="fs" id="r-pac"></select></div>
+        <div class="fgrp"><label class="flabel">Turno</label>
+          <select class="fs" id="r-turno"><option>Manhã (07h–15h)</option><option>Tarde (15h–23h)</option><option>Noite (23h–07h)</option></select>
+        </div>
+        <div class="fgrp"><label class="flabel">PA (mmHg)</label><input class="fi" id="r-pa" placeholder="120/80"/></div>
+        <div class="fgrp"><label class="flabel">FC (bpm)</label><input class="fi" id="r-fc" placeholder="80"/></div>
+        <div class="fgrp"><label class="flabel">Temp. (°C)</label><input class="fi" id="r-temp" placeholder="36.5"/></div>
+        <div class="fgrp"><label class="flabel">SpO2 (%)</label><input class="fi" id="r-spo2" placeholder="98"/></div>
+        <div class="fgrp ff"><label class="flabel">Estado Geral</label>
+          <select class="fs" id="r-estado"><option>Bom estado geral (BEG)</option><option>Regular estado geral (REG)</option><option>Mau estado geral (MEG)</option></select>
+        </div>
+        <div class="fgrp ff"><label class="flabel">Evolução / Observações</label><textarea class="ft" id="r-obs" style="min-height:80px" placeholder="Estado do paciente, comportamento..."></textarea></div>
+        <div class="fgrp ff"><label class="flabel">Intercorrências</label><textarea class="ft" id="r-inter" placeholder="Quedas, agitação, recusa de medicação..."></textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-outline" onclick="cm('m-relat')">Cancelar</button><button class="btn btn-primary" onclick="salvarRelat()">✓ Salvar</button></div>
+  </div>
+</div>
+
+<!-- Cadastrar Funcionário -->
+<div class="modal-overlay" id="m-func">
+  <div class="modal modal-sm">
+    <div class="modal-head"><div class="modal-title">👥 Cadastrar Funcionário</div><button class="modal-close" onclick="cm('m-func')">✕</button></div>
+    <div class="modal-body">
+      <div class="fg">
+        <div class="fgrp ff"><label class="flabel">Nome Completo</label><input class="fi" id="f-nome" placeholder="Nome do funcionário" oninput="gerarSenhaAuto()"/></div>
+        <div class="fgrp ff"><label class="flabel">E-mail (login)</label><input class="fi" id="f-email" placeholder="email@hospital.com" type="email"/></div>
+        <div class="fgrp"><label class="flabel">Cargo</label>
+          <select class="fs" id="f-cargo"><option value="medico">Médico</option><option value="farmacia">Farmacêutico</option><option value="enfermagem">Enfermeiro</option></select>
+        </div>
+        <div class="fgrp"><label class="flabel">Data de Nascimento</label><input class="fi" id="f-nasc" type="date" oninput="gerarSenhaAuto()"/></div>
+        <div class="fgrp ff"><label class="flabel">Registro Profissional</label><input class="fi" id="f-reg" placeholder="CRM / CRF / COREN"/></div>
+      </div>
+      <div style="margin-top:14px">
+        <label class="flabel" style="margin-bottom:6px;display:block">Senha gerada automaticamente</label>
+        <div class="senha-gerada" id="senha-preview">—</div>
+        <div class="senha-hint">Gerada com base no primeiro nome + data de nascimento completa.<br>O funcionário deverá trocá-la no primeiro acesso.</div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-outline" onclick="cm('m-func')">Cancelar</button><button class="btn btn-primary" onclick="salvarFunc()">✓ Cadastrar</button></div>
+  </div>
+</div>
+
+<!-- Ver Relatórios -->
+<div class="modal-overlay" id="m-verrelat">
+  <div class="modal modal-lg">
+    <div class="modal-head"><div class="modal-title">📋 Relatórios do Paciente</div><button class="modal-close" onclick="cm('m-verrelat')">✕</button></div>
+    <div class="modal-body" id="verrelat-body"></div>
+    <div class="modal-foot"><button class="btn btn-outline" onclick="cm('m-verrelat')">Fechar</button></div>
+  </div>
+</div>
+
+<!-- Detalhe Prescrição -->
+<div class="modal-overlay" id="m-rxdet">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">📋 Detalhes da Prescrição</div><button class="modal-close" onclick="cm('m-rxdet')">✕</button></div>
+    <div class="modal-body" id="rxdet-body"></div>
+    <div class="modal-foot"><button class="btn btn-outline" onclick="cm('m-rxdet')">Fechar</button></div>
+  </div>
+</div>
+
+<div class="toast-area" id="toast-area"></div>
+
+<script>
+// ═══════════════════════════════════
+// DADOS
+// ═══════════════════════════════════
+const TODAY = new Date(2026,3,28);
+
+let funcionarios = [
+  {id:'admin', nome:'Alef Dias',       email:'alefdias44@exemplo.com', senha:'12345',          cargo:'admin',      reg:'—',         ativo:true, primeiroAcesso:false},
+  {id:'med1',  nome:'Dr. Carlos Lima', email:'carlos@medcare.com',     senha:'carlos01011980', cargo:'medico',     reg:'CRM 12345', ativo:true, primeiroAcesso:true},
+  {id:'farm1', nome:'Ana Paula',       email:'ana@medcare.com',        senha:'ana15031990',    cargo:'farmacia',   reg:'CRF 6789',  ativo:true, primeiroAcesso:true},
+  {id:'enf1',  nome:'Juliana Costa',   email:'juliana@medcare.com',    senha:'juliana20051988',cargo:'enfermagem', reg:'COREN 321', ativo:true, primeiroAcesso:true},
+];
+
+let pacientes = [
+  {id:1,nome:'José Ferreira',leito:'A-01',admissao:'22/04/2026',diag:'Dep. Álcool (F10)',  alerg:'NKDA',    status:'internado',nasc:'1978-05-12',obs:'Abstinência severa'},
+  {id:2,nome:'Maria Souza',  leito:'A-03',admissao:'24/04/2026',diag:'Dep. Cocaína (F14)', alerg:'Dipirona',status:'internado',nasc:'1990-11-03',obs:''},
+  {id:3,nome:'Pedro Alves',  leito:'B-02',admissao:'20/04/2026',diag:'Dep. Opioides (F11)',alerg:'NKDA',    status:'internado',nasc:'1985-07-22',obs:'Protocolo desintox.'},
+  {id:4,nome:'Ana Martins',  leito:'B-05',admissao:'26/04/2026',diag:'Dep. Cannabis (F12)',alerg:'AAS',     status:'internado',nasc:'2000-03-15',obs:''},
+  {id:5,nome:'Carlos Dias',  leito:'C-01',admissao:'10/04/2026',diag:'Múltiplas (F19)',    alerg:'NKDA',    status:'internado',nasc:'1972-09-08',obs:'Evolução favorável'},
+];
+
+let prescricoes = [
+  {id:'RX-001',pacId:1,pacNome:'José Ferreira',leito:'A-01',med:'Diazepam 10mg',   via:'Oral (VO)',       dose:'10mg', freq:'2x ao dia (12/12h)', dur:'5 dias', medico:'Dr. Carlos Lima',dt:'28/04/2026 07:30',status:'ativa',       obs:'Monitorar sedação'},
+  {id:'RX-002',pacId:2,pacNome:'Maria Souza',  leito:'A-03',med:'Naltrexona 50mg', via:'Oral (VO)',       dose:'50mg', freq:'1x ao dia (24/24h)', dur:'30 dias',medico:'Dr. Carlos Lima',dt:'28/04/2026 08:15',status:'ativa',       obs:''},
+  {id:'RX-003',pacId:3,pacNome:'Pedro Alves',  leito:'B-02',med:'Buprenorfina 8mg',via:'Sublingual (SL)', dose:'8mg',  freq:'1x ao dia (24/24h)', dur:'14 dias',medico:'Dr. Carlos Lima',dt:'28/04/2026 09:00',status:'ativa',       obs:'Supervisionar SL'},
+  {id:'RX-004',pacId:1,pacNome:'José Ferreira',leito:'A-01',med:'Tiamina 300mg',   via:'Intravenosa (IV)',dose:'300mg',freq:'1x ao dia (24/24h)', dur:'3 dias', medico:'Dr. Carlos Lima',dt:'27/04/2026 20:00',status:'dispensada',  obs:''},
+  {id:'RX-005',pacId:4,pacNome:'Ana Martins',  leito:'B-05',med:'Olanzapina 5mg',  via:'Oral (VO)',       dose:'5mg',  freq:'1x ao dia (24/24h)', dur:'7 dias', medico:'Dr. Carlos Lima',dt:'27/04/2026 18:30',status:'administrada',obs:''},
+];
+
+let relatoriosEnf = [];
+let historico = [
+  {dt:'28/04/2026 09:01',tipo:'Prescrição',  pac:'Pedro Alves',  med:'Buprenorfina 8mg',resp:'Dr. Carlos Lima',obs:'Prescrita'},
+  {dt:'27/04/2026 20:30',tipo:'Dispensação', pac:'José Ferreira',med:'Tiamina 300mg',   resp:'Ana Paula',      obs:'Dispensada RX-004'},
+  {dt:'27/04/2026 18:45',tipo:'Administração',pac:'Ana Martins', med:'Olanzapina 5mg',  resp:'Enf. Juliana',   obs:'Administrada VO'},
+];
+
+// ═══════════════════════════════════
+// AUTH
+// ═══════════════════════════════════
+let currentUser = null;
+let userPendingTroca = null;
+
+function doLogin(){
+  const email = document.getElementById('l-email').value.trim().toLowerCase();
+  const senha = document.getElementById('l-senha').value;
+  const err   = document.getElementById('login-err');
+  const user  = funcionarios.find(f => f.email.toLowerCase()===email && f.senha===senha && f.ativo);
+  if(!user){ err.classList.add('show'); return; }
+  err.classList.remove('show');
+  if(user.primeiroAcesso){
+    userPendingTroca = user;
+    hide('sc-login'); show('sc-troca');
+    return;
+  }
+  entrarNoSistema(user);
+}
+
+function trocarSenha(){
+  const nova = document.getElementById('t-nova').value;
+  const conf = document.getElementById('t-conf').value;
+  const err  = document.getElementById('troca-err');
+  if(!nova || nova.length < 6 || nova !== conf){ err.classList.add('show'); return; }
+  err.classList.remove('show');
+  userPendingTroca.senha = nova;
+  userPendingTroca.primeiroAcesso = false;
+  entrarNoSistema(userPendingTroca);
+  userPendingTroca = null;
+  document.getElementById('t-nova').value='';
+  document.getElementById('t-conf').value='';
+}
+
+function entrarNoSistema(user){
+  currentUser = user;
+  hide('sc-login'); hide('sc-troca');
+  show('app','flex');
+  setupSidebar();
+  showFirstPanel();
+}
+
+function doLogout(){
+  currentUser = null;
+  hide('app');
+  show('sc-login');
+  document.getElementById('l-email').value='';
+  document.getElementById('l-senha').value='';
+}
+
+function show(id, display='flex'){ document.getElementById(id).style.display=display; }
+function hide(id){ document.getElementById(id).style.display='none'; }
+
+// ═══════════════════════════════════
+// SENHA AUTO
+// ═══════════════════════════════════
+function gerarSenhaAuto(){
+  const nome = document.getElementById('f-nome').value.trim();
+  const nasc = document.getElementById('f-nasc').value; // yyyy-mm-dd
+  const prev = document.getElementById('senha-preview');
+  if(!nome || !nasc){ prev.textContent='—'; return; }
+  const primeiro = nome.split(' ')[0].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const [y,m,d] = nasc.split('-');
+  const senha = `${primeiro}${d}${m}${y}`;
+  prev.textContent = senha;
+}
+
+function getSenhaGerada(){
+  const t = document.getElementById('senha-preview').textContent;
+  return t==='—' ? null : t;
+}
+
+// ═══════════════════════════════════
+// SIDEBAR
+// ═══════════════════════════════════
+const navConfig = {
+  admin:[
+    {sec:'Gestão'},
+    {id:'adm-dash',  icon:'⬜',label:'Dashboard'},
+    {id:'adm-funcs', icon:'👥',label:'Funcionários'},
+    {id:'adm-pacs',  icon:'👤',label:'Pacientes'},
+    {sec:'Relatórios'},
+    {id:'adm-hist',  icon:'📊',label:'Histórico Geral'},
+  ],
+  medico:[
+    {sec:'Clínico'},
+    {id:'med-dash',  icon:'⬜',label:'Dashboard'},
+    {id:'med-pacs',  icon:'👤',label:'Pacientes'},
+    {id:'med-rx',    icon:'📋',label:'Prescrições',badge:'presc'},
+    {sec:'Consulta'},
+    {id:'med-relats',icon:'📝',label:'Relatórios Enf.'},
+    {id:'med-hist',  icon:'📊',label:'Histórico'},
+  ],
+  farmacia:[
+    {sec:'Farmácia'},
+    {id:'farm-disp', icon:'💊',label:'Dispensação',badge:'disp'},
+    {id:'farm-hist', icon:'📊',label:'Histórico'},
+  ],
+  enfermagem:[
+    {sec:'Enfermagem'},
+    {id:'enf-painel',icon:'⬜',label:'Painel'},
+    {id:'enf-pacs',  icon:'👤',label:'Pacientes'},
+    {id:'enf-adm',   icon:'💉',label:'Administrar',badge:'adminPend'},
+    {id:'enf-relat', icon:'📝',label:'Relatórios Diários'},
+    {id:'enf-sv',    icon:'❤️',label:'Sinais Vitais'},
+  ],
+};
+
+const roleInfo = {
+  admin:     {label:'ADMIN',    cls:'b-yellow',icon:'📊'},
+  medico:    {label:'MÉDICO',   cls:'b-blue',  icon:'👨‍⚕️'},
+  farmacia:  {label:'FARMÁCIA', cls:'b-green', icon:'💊'},
+  enfermagem:{label:'ENFER.',   cls:'b-purple',icon:'🩺'},
+};
+
+function setupSidebar(){
+  const ri = roleInfo[currentUser.cargo];
+  document.getElementById('sb-av').textContent   = ri.icon;
+  document.getElementById('sb-name').textContent = currentUser.nome;
+  document.getElementById('sb-role').innerHTML   = `<span class="badge ${ri.cls}">${ri.label}</span>`;
+  const nav = document.getElementById('sb-nav');
+  nav.innerHTML='';
+  navConfig[currentUser.cargo].forEach(item=>{
+    if(item.sec){nav.innerHTML+=`<div class="nav-sec">${item.sec}</div>`;return;}
+    nav.innerHTML+=`<div class="nav-item" id="nav-${item.id}" onclick="showPanel('${item.id}')">
+      <span class="nav-icon">${item.icon}</span>${item.label}
+      ${item.badge?`<span class="nav-badge" id="badge-${item.badge}">0</span>`:''}
+    </div>`;
+  });
+  updateBadges();
+}
+
+function showFirstPanel(){
+  const first = navConfig[currentUser.cargo].find(n=>n.id);
+  if(first) showPanel(first.id);
+}
+
+// ═══════════════════════════════════
+// PANELS
+// ═══════════════════════════════════
+const panelTitles={
+  'adm-dash':'Dashboard Administrativo','adm-funcs':'Gestão de Funcionários',
+  'adm-pacs':'Pacientes','adm-hist':'Histórico Geral',
+  'med-dash':'Dashboard Médico','med-pacs':'Pacientes','med-rx':'Prescrições',
+  'med-relats':'Relatórios de Enfermagem','med-hist':'Histórico',
+  'farm-disp':'Dispensação','farm-hist':'Histórico de Dispensações',
+  'enf-painel':'Painel de Enfermagem','enf-pacs':'Pacientes',
+  'enf-adm':'Administração de Medicamentos','enf-relat':'Relatórios Diários','enf-sv':'Sinais Vitais',
+};
+
+function showPanel(id){
+  document.getElementById('content').innerHTML = buildPanel(id);
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const ni = document.getElementById('nav-'+id);
+  if(ni) ni.classList.add('active');
+  document.getElementById('topbar-title').textContent = panelTitles[id]||id;
+  setTimeout(()=>{ fillPacSel('rx-pac'); fillPacSel('r-pac'); },30);
+  updateBadges();
+}
+
+function buildPanel(id){
+  switch(id){
+    case 'adm-dash':   return pAdmDash();
+    case 'adm-funcs':  return pAdmFuncs();
+    case 'adm-pacs':   return pPacientes();
+    case 'adm-hist':   return pHistorico();
+    case 'med-dash':   return pMedDash();
+    case 'med-pacs':   return pPacientes();
+    case 'med-rx':     return pRx();
+    case 'med-relats': return pRelatsMed();
+    case 'med-hist':   return pHistorico();
+    case 'farm-disp':  return pDisp();
+    case 'farm-hist':  return pHistFarm();
+    case 'enf-painel': return pEnfPainel();
+    case 'enf-pacs':   return pPacientes();
+    case 'enf-adm':    return pEnfAdm();
+    case 'enf-relat':  return pEnfRelat();
+    case 'enf-sv':     return pEnfSV();
+    default: return '';
+  }
+}
+
+// ═══════════════════════════════════
+// PANEL BUILDERS
+// ═══════════════════════════════════
+
+function pAdmDash(){
+  const intern   = pacientes.filter(p=>p.status==='internado').length;
+  const altas    = pacientes.filter(p=>p.status==='alta').length;
+  const funcs    = funcionarios.filter(f=>f.cargo!=='admin'&&f.ativo).length;
+  const inativos = funcionarios.filter(f=>f.cargo!=='admin'&&!f.ativo).length;
+  return `
+  <div class="sec-hdr"><div><div class="sec-title">Dashboard Administrativo</div><div class="sec-sub">Visão geral do sistema</div></div></div>
+  <div class="sg4">
+    <div class="stat-card"><div class="stat-label">Internados</div><div class="stat-val" style="color:var(--blue)">${intern}</div><div class="stat-sub">pacientes ativos</div></div>
+    <div class="stat-card"><div class="stat-label">Altas</div><div class="stat-val" style="color:var(--green)">${altas}</div><div class="stat-sub">registradas</div></div>
+    <div class="stat-card"><div class="stat-label">Funcionários</div><div class="stat-val" style="color:var(--yellow)">${funcs}</div><div class="stat-sub">ativos no sistema</div></div>
+    <div class="stat-card"><div class="stat-label">Inativos</div><div class="stat-val" style="color:var(--red)">${inativos}</div><div class="stat-sub">desativados</div></div>
+  </div>
+  <div class="sg2">
+    <div class="tcard">
+      <div class="thead-row"><div class="ttitle">Pacientes — Tempo Internação</div></div>
+      <table><thead><tr><th>Paciente</th><th>Leito</th><th>Dias</th><th>Diagnóstico</th></tr></thead>
+      <tbody>${[...pacientes].filter(p=>p.status==='internado').sort((a,b)=>dias(b.admissao)-dias(a.admissao)).map(p=>`<tr>
+        <td><strong>${p.nome}</strong></td><td class="mono">${p.leito}</td>
+        <td>${dBadge(p.admissao)}</td><td style="font-size:11px">${p.diag}</td>
+      </tr>`).join('')}</tbody></table>
+    </div>
+    <div class="tcard">
+      <div class="thead-row"><div class="ttitle">Funcionários</div><button class="btn btn-primary btn-sm" onclick="om('m-func')">+ Novo</button></div>
+      <table><thead><tr><th>Nome</th><th>Cargo</th><th>1º Acesso</th><th>Status</th></tr></thead>
+      <tbody>${funcionarios.filter(f=>f.cargo!=='admin').map(f=>`<tr>
+        <td>${f.nome}</td><td>${cargoLabel(f.cargo)}</td>
+        <td>${f.primeiroAcesso?'<span class="badge b-yellow">Pendente</span>':'<span class="badge b-gray">Feito</span>'}</td>
+        <td>${f.ativo?'<span class="badge b-green">Ativo</span>':'<span class="badge b-gray">Inativo</span>'}</td>
+      </tr>`).join('')}</tbody></table>
+    </div>
+  </div>`;
+}
+
+function pAdmFuncs(){
+  return `
+  <div class="sec-hdr">
+    <div><div class="sec-title">Gestão de Funcionários</div><div class="sec-sub">${funcionarios.filter(f=>f.cargo!=='admin'&&f.ativo).length} ativos</div></div>
+    <button class="btn btn-primary" onclick="om('m-func')">+ Cadastrar Funcionário</button>
+  </div>
+  ${funcionarios.filter(f=>f.cargo!=='admin').map(f=>`
+  <div class="func-card">
+    <div class="func-av" style="background:${cargoColor(f.cargo)}">${roleInfo[f.cargo].icon}</div>
+    <div>
+      <div class="func-name">${f.nome}</div>
+      <div class="func-info">${f.email} · ${f.reg} · ${cargoLabel(f.cargo)}</div>
+      <div style="margin-top:4px">${f.primeiroAcesso?'<span class="badge b-yellow" style="font-size:9px">Aguard. primeiro acesso</span>':'<span class="badge b-gray" style="font-size:9px">Senha já trocada</span>'}</div>
+    </div>
+    <div class="func-actions">
+      ${f.ativo
+        ?`<span class="badge b-green">Ativo</span><button class="btn btn-outline btn-sm" onclick="toggleFunc('${f.id}')">Desativar</button>`
+        :`<span class="badge b-gray">Inativo</span><button class="btn btn-green btn-sm" onclick="toggleFunc('${f.id}')">Reativar</button>`
+      }
+    </div>
+  </div>`).join('')}`;
+}
+
+function pPacientes(){
+  const intern = pacientes.filter(p=>p.status==='internado');
+  const altas  = pacientes.filter(p=>p.status==='alta');
+  const canAdmit = ['admin','medico','enfermagem'].includes(currentUser?.cargo);
+  const canAlta  = ['admin','medico'].includes(currentUser?.cargo);
+  return `
+  <div class="sec-hdr">
+    <div><div class="sec-title">Pacientes</div><div class="sec-sub">${intern.length} internados · ${altas.length} altas</div></div>
+    ${canAdmit?`<button class="btn btn-primary" onclick="om('m-pac')">+ Admitir Paciente</button>`:''}
+  </div>
+  <div class="tcard">
+    <div class="thead-row"><div class="ttitle">Internados</div></div>
+    <table><thead><tr><th>Paciente</th><th>Leito</th><th>Admissão</th><th>Dias</th><th>Diagnóstico</th><th>Alergias</th>${canAlta?'<th>Ações</th>':''}</tr></thead>
+    <tbody>${intern.map(p=>`<tr>
+      <td><strong>${p.nome}</strong></td><td class="mono">${p.leito}</td>
+      <td class="mono" style="font-size:10px">${p.admissao}</td>
+      <td>${dBadge(p.admissao)}</td>
+      <td style="font-size:11px">${p.diag}</td>
+      <td class="mono" style="font-size:10px;color:var(--red)">${p.alerg}</td>
+      ${canAlta?`<td><button class="btn btn-red btn-xs" onclick="abrirAlta(${p.id})">Alta</button></td>`:''}
+    </tr>`).join('')}</tbody></table>
+  </div>
+  ${altas.length?`<div class="tcard">
+    <div class="thead-row"><div class="ttitle">Altas Recentes</div></div>
+    <table><thead><tr><th>Paciente</th><th>Leito</th><th>Data Alta</th><th>Tipo</th><th>Resumo</th></tr></thead>
+    <tbody>${altas.map(p=>`<tr>
+      <td>${p.nome}</td><td class="mono">${p.leito}</td>
+      <td class="mono" style="font-size:10px">${p.dataAlta||'—'}</td>
+      <td style="font-size:11px">${p.tipoAlta||'—'}</td>
+      <td style="font-size:11px;color:var(--text3)">${p.resumoAlta||'—'}</td>
+    </tr>`).join('')}</tbody></table>
+  </div>`:''}`;
+}
+
+function pMedDash(){
+  const intern = pacientes.filter(p=>p.status==='internado').length;
+  const atv    = prescricoes.filter(p=>p.status==='ativa').length;
+  const disp   = prescricoes.filter(p=>p.status==='dispensada').length;
+  const long   = pacientes.filter(p=>p.status==='internado'&&dias(p.admissao)>20).length;
+  return `
+  <div class="sec-hdr"><div><div class="sec-title">Dashboard Médico</div></div>
+    <div class="sec-actions">
+      <button class="btn btn-outline" onclick="showPanel('med-pacs')">Pacientes</button>
+      <button class="btn btn-primary" onclick="om('m-rx')">+ Prescrição</button>
+    </div>
+  </div>
+  <div class="sg4">
+    <div class="stat-card"><div class="stat-label">Internados</div><div class="stat-val" style="color:var(--blue)">${intern}</div></div>
+    <div class="stat-card"><div class="stat-label">Prescrições Ativas</div><div class="stat-val" style="color:var(--yellow)">${atv}</div><div class="stat-sub">aguardando farmácia</div></div>
+    <div class="stat-card"><div class="stat-label">Aguard. Administração</div><div class="stat-val" style="color:var(--purple)">${disp}</div></div>
+    <div class="stat-card"><div class="stat-label">Internação Longa</div><div class="stat-val" style="color:var(--red)">${long}</div><div class="stat-sub">acima de 20 dias</div></div>
+  </div>
+  <div class="sg2">
+    <div class="tcard">
+      <div class="thead-row"><div class="ttitle">Pacientes — Dias Internados</div></div>
+      <table><thead><tr><th>Paciente</th><th>Leito</th><th>Dias</th><th>Diagnóstico</th><th>Alta</th></tr></thead>
+      <tbody>${pacientes.filter(p=>p.status==='internado').map(p=>`<tr>
+        <td><strong>${p.nome}</strong></td><td class="mono">${p.leito}</td>
+        <td>${dBadge(p.admissao)}</td><td style="font-size:11px">${p.diag}</td>
+        <td><button class="btn btn-red btn-xs" onclick="abrirAlta(${p.id})">Alta</button></td>
+      </tr>`).join('')}</tbody></table>
+    </div>
+    <div class="tcard">
+      <div class="thead-row"><div class="ttitle">Últimas Prescrições</div><button class="btn btn-outline btn-sm" onclick="showPanel('med-rx')">Ver todas</button></div>
+      <table><thead><tr><th>Paciente</th><th>Medicamento</th><th>Status</th></tr></thead>
+      <tbody>${prescricoes.slice(0,5).map(p=>`<tr>
+        <td>${p.pacNome}</td><td>${p.med}</td><td>${sbadge(p.status)}</td>
+      </tr>`).join('')}</tbody></table>
+    </div>
+  </div>`;
+}
+
+function pRx(){
+  return `
+  <div class="sec-hdr">
+    <div><div class="sec-title">Prescrições Médicas</div></div>
+    <div class="sec-actions">
+      <select class="fs" style="padding:6px 10px;font-size:11px;width:150px" onchange="filtRx(this.value)">
+        <option value="">Todos</option><option value="ativa">Ativas</option>
+        <option value="dispensada">Dispensadas</option><option value="administrada">Administradas</option>
+      </select>
+      <button class="btn btn-primary" onclick="om('m-rx')">+ Nova Prescrição</button>
+    </div>
+  </div>
+  <div class="tcard">
+    <table><thead><tr><th>ID</th><th>Paciente</th><th>Medicamento</th><th>Dose/Freq</th><th>Via</th><th>Data</th><th>Status</th><th>Ações</th></tr></thead>
+    <tbody id="rx-tbody">${rxRows(prescricoes)}</tbody></table>
+  </div>`;
+}
+
+function rxRows(lista){
+  if(!lista.length) return `<tr><td colspan="8" style="text-align:center;padding:28px;color:var(--text3)">Nenhuma prescrição</td></tr>`;
+  return lista.map(p=>`<tr>
+    <td class="mono" style="color:var(--blue)">${p.id}</td>
+    <td><strong>${p.pacNome}</strong></td><td>${p.med}</td>
+    <td class="mono" style="font-size:10px">${p.dose} · ${p.freq}</td>
+    <td style="font-size:11px">${p.via}</td>
+    <td class="mono" style="font-size:10px">${p.dt}</td>
+    <td>${sbadge(p.status)}</td>
+    <td style="display:flex;gap:4px">
+      <button class="btn btn-outline btn-sm" onclick="verRx('${p.id}')">Ver</button>
+      ${p.status==='ativa'?`<button class="btn btn-green btn-sm" onclick="abrirDisp('${p.id}')">Disp.</button>`:''}
+    </td>
+  </tr>`).join('');
+}
+
+function filtRx(val){
+  const l = val ? prescricoes.filter(p=>p.status===val) : prescricoes;
+  const tb = document.getElementById('rx-tbody');
+  if(tb) tb.innerHTML = rxRows(l);
+}
+
+function pRelatsMed(){
+  if(!relatoriosEnf.length) return `<div class="sec-hdr"><div class="sec-title">Relatórios de Enfermagem</div></div><div class="tcard"><div style="text-align:center;padding:40px;color:var(--text3)">Nenhum relatório registrado ainda</div></div>`;
+  return `
+  <div class="sec-hdr"><div class="sec-title">Relatórios de Enfermagem</div></div>
+  <div class="tcard"><table><thead><tr><th>Data</th><th>Paciente</th><th>Turno</th><th>Estado</th><th>Enfermeiro</th><th>Ver</th></tr></thead>
+  <tbody>${relatoriosEnf.map(r=>`<tr>
+    <td class="mono" style="font-size:10px">${r.data}</td>
+    <td><strong>${r.pacNome}</strong></td><td style="font-size:11px">${r.turno}</td>
+    <td>${estadoBadge(r.estado)}</td><td style="font-size:11px">${r.resp}</td>
+    <td><button class="btn btn-outline btn-sm" onclick="verRelatsPac(${r.pacId})">Ver</button></td>
+  </tr>`).join('')}</tbody></table></div>`;
+}
+
+function pHistorico(){
+  return `
+  <div class="sec-hdr"><div class="sec-title">Histórico de Movimentações</div></div>
+  <div class="tcard"><table><thead><tr><th>Data/Hora</th><th>Tipo</th><th>Paciente</th><th>Medicamento</th><th>Responsável</th><th>Obs.</th></tr></thead>
+  <tbody>${historico.map(h=>`<tr>
+    <td class="mono" style="font-size:10px">${h.dt}</td><td>${tipoHist(h.tipo)}</td>
+    <td>${h.pac}</td><td>${h.med}</td>
+    <td style="font-size:11px">${h.resp}</td>
+    <td style="font-size:11px;color:var(--text3)">${h.obs}</td>
+  </tr>`).join('')}</tbody></table></div>`;
+}
+
+function pDisp(){
+  const pend = prescricoes.filter(p=>p.status==='ativa');
+  return `
+  <div class="sec-hdr"><div><div class="sec-title">Fila de Dispensação</div><div class="sec-sub">${pend.length} prescrições aguardando</div></div></div>
+  <div class="alert a-warn">⚠️ Confira alergias do paciente antes de dispensar.</div>
+  <div class="tcard">
+    <div class="thead-row"><div class="ttitle">Prescrições Ativas</div><span class="badge b-yellow">${pend.length} pendentes</span></div>
+    <table><thead><tr><th>ID</th><th>Paciente</th><th>Leito</th><th>Alergias</th><th>Medicamento</th><th>Dose/Via</th><th>Médico</th><th>Ação</th></tr></thead>
+    <tbody>${pend.length===0
+      ?`<tr><td colspan="8" style="text-align:center;padding:28px;color:var(--green)">✓ Sem pendências</td></tr>`
+      :pend.map(p=>{const pac=pacientes.find(x=>x.id===p.pacId);return `<tr>
+        <td class="mono" style="color:var(--blue)">${p.id}</td>
+        <td><strong>${p.pacNome}</strong></td><td class="mono">${p.leito}</td>
+        <td class="mono" style="font-size:10px;color:var(--red)">${pac?.alerg||'NKDA'}</td>
+        <td>${p.med}</td><td class="mono" style="font-size:10px">${p.dose} · ${p.via}</td>
+        <td style="font-size:11px">${p.medico}</td>
+        <td><button class="btn btn-green btn-sm" onclick="abrirDisp('${p.id}')">Dispensar</button></td>
+      </tr>`;}).join('')}
+    </tbody></table>
+  </div>`;
+}
+
+function pHistFarm(){
+  const farm = historico.filter(h=>h.tipo==='Dispensação');
+  return `
+  <div class="sec-hdr"><div class="sec-title">Histórico de Dispensações</div></div>
+  <div class="sg3">
+    <div class="stat-card"><div class="stat-label">Total</div><div class="stat-val" style="color:var(--green)">${farm.length}</div></div>
+    <div class="stat-card"><div class="stat-label">Hoje</div><div class="stat-val" style="color:var(--blue)">${farm.filter(h=>h.dt.startsWith('28/04')).length}</div></div>
+    <div class="stat-card"><div class="stat-label">Pendentes</div><div class="stat-val" style="color:var(--yellow)">${prescricoes.filter(p=>p.status==='ativa').length}</div></div>
+  </div>
+  <div class="tcard"><table><thead><tr><th>Data/Hora</th><th>Paciente</th><th>Medicamento</th><th>Farmacêutico</th></tr></thead>
+  <tbody>${farm.length?farm.map(h=>`<tr>
+    <td class="mono" style="font-size:10px">${h.dt}</td><td>${h.pac}</td><td>${h.med}</td><td style="font-size:11px">${h.resp}</td>
+  </tr>`).join(''):`<tr><td colspan="4" style="text-align:center;padding:28px;color:var(--text3)">Nenhum registro</td></tr>`}</tbody></table></div>`;
+}
+
+function pEnfPainel(){
+  const relatHoje = id => relatoriosEnf.some(r=>r.pacId===id&&r.data===hojeStr());
+  return `
+  <div class="sec-hdr"><div><div class="sec-title">Painel de Enfermagem</div></div>
+    <button class="btn btn-primary" onclick="om('m-pac')">+ Admitir Paciente</button>
+  </div>
+  <div class="sg3">
+    <div class="stat-card"><div class="stat-label">Internados</div><div class="stat-val" style="color:var(--blue)">${pacientes.filter(p=>p.status==='internado').length}</div></div>
+    <div class="stat-card"><div class="stat-label">Meds Pendentes</div><div class="stat-val" style="color:var(--yellow)">${prescricoes.filter(p=>p.status==='dispensada').length}</div></div>
+    <div class="stat-card"><div class="stat-label">Relatórios Hoje</div><div class="stat-val" style="color:var(--purple)">${relatoriosEnf.filter(r=>r.data===hojeStr()).length}</div></div>
+  </div>
+  <div class="tcard">
+    <table><thead><tr><th>Paciente</th><th>Leito</th><th>Dias</th><th>Diagnóstico</th><th>Alergias</th><th>Relat. hoje</th><th>Ações</th></tr></thead>
+    <tbody>${pacientes.filter(p=>p.status==='internado').map(p=>`<tr>
+      <td><strong>${p.nome}</strong></td><td class="mono">${p.leito}</td>
+      <td>${dBadge(p.admissao)}</td><td style="font-size:11px">${p.diag}</td>
+      <td class="mono" style="font-size:10px;color:var(--red)">${p.alerg}</td>
+      <td>${relatHoje(p.id)?'<span class="badge b-green">✓ Feito</span>':'<span class="badge b-yellow">Pendente</span>'}</td>
+      <td style="display:flex;gap:4px">
+        <button class="btn btn-outline btn-sm" onclick="abrirRelat(${p.id})">Relatório</button>
+        <button class="btn btn-outline btn-sm" onclick="verRelatsPac(${p.id})">Ver</button>
+      </td>
+    </tr>`).join('')}</tbody></table>
+  </div>`;
+}
+
+function pEnfAdm(){
+  const disp = prescricoes.filter(p=>p.status==='dispensada');
+  return `
+  <div class="sec-hdr"><div><div class="sec-title">Administração de Medicamentos</div></div></div>
+  <div class="alert a-info">🩺 Confirme identificação do paciente e leito antes de administrar.</div>
+  <div class="tcard">
+    <table><thead><tr><th>Paciente</th><th>Leito</th><th>Alergias</th><th>Medicamento</th><th>Dose</th><th>Via</th><th>Frequência</th><th>Ação</th></tr></thead>
+    <tbody>${disp.length===0
+      ?`<tr><td colspan="8" style="text-align:center;padding:28px;color:var(--green)">✓ Nenhum medicamento pendente</td></tr>`
+      :disp.map(p=>{const pac=pacientes.find(x=>x.id===p.pacId);return `<tr>
+        <td><strong>${p.pacNome}</strong></td><td class="mono">${p.leito}</td>
+        <td class="mono" style="font-size:10px;color:var(--red)">${pac?.alerg||'NKDA'}</td>
+        <td>${p.med}</td><td class="mono">${p.dose}</td>
+        <td style="font-size:11px">${p.via}</td><td style="font-size:11px">${p.freq}</td>
+        <td><button class="btn btn-primary btn-sm" onclick="abrirAdm('${p.id}')">Administrar</button></td>
+      </tr>`;}).join('')}
+    </tbody></table>
+  </div>`;
+}
+
+function pEnfRelat(){
+  return `
+  <div class="sec-hdr">
+    <div><div class="sec-title">Relatórios Diários</div><div class="sec-sub">${relatoriosEnf.length} registros totais</div></div>
+    <button class="btn btn-primary" onclick="abrirRelat(null)">+ Novo Relatório</button>
+  </div>
+  ${relatoriosEnf.length===0
+    ?`<div class="tcard"><div style="text-align:center;padding:40px;color:var(--text3)">Nenhum relatório registrado</div></div>`
+    :`<div class="tcard"><table><thead><tr><th>Data</th><th>Turno</th><th>Paciente</th><th>Leito</th><th>Estado</th><th>PA</th><th>FC</th><th>Temp</th><th>Enfermeiro</th><th>Ver</th></tr></thead>
+    <tbody>${relatoriosEnf.map(r=>`<tr>
+      <td class="mono" style="font-size:10px">${r.data}</td>
+      <td style="font-size:11px">${r.turno}</td>
+      <td><strong>${r.pacNome}</strong></td><td class="mono">${r.leito}</td>
+      <td>${estadoBadge(r.estado)}</td>
+      <td class="mono" style="font-size:10px">${r.pa||'—'}</td>
+      <td class="mono" style="font-size:10px">${r.fc||'—'}</td>
+      <td class="mono" style="font-size:10px">${r.temp||'—'}</td>
+      <td style="font-size:11px">${r.resp}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="verRelatsPac(${r.pacId})">Ver</button></td>
+    </tr>`).join('')}</tbody></table></div>`}`;
+}
+
+function pEnfSV(){
+  return `
+  <div class="sec-hdr"><div class="sec-title">Sinais Vitais — Último Registro</div></div>
+  <div class="tcard"><table><thead><tr><th>Paciente</th><th>Leito</th><th>Turno</th><th>PA</th><th>FC</th><th>Temp</th><th>SpO2</th><th>Estado</th></tr></thead>
+  <tbody>${pacientes.filter(p=>p.status==='internado').map(p=>{
+    const relats = relatoriosEnf.filter(r=>r.pacId===p.id);
+    const ult = relats[relats.length-1]||null;
+    return `<tr>
+      <td><strong>${p.nome}</strong></td><td class="mono">${p.leito}</td>
+      <td style="font-size:11px;color:var(--text3)">${ult?ult.turno:'—'}</td>
+      <td class="mono" style="font-size:11px">${ult?.pa||'—'}</td>
+      <td class="mono" style="font-size:11px">${ult?.fc?ult.fc+' bpm':'—'}</td>
+      <td class="mono" style="font-size:11px">${ult?.temp?ult.temp+'°C':'—'}</td>
+      <td class="mono" style="font-size:11px">${ult?.spo2?ult.spo2+'%':'—'}</td>
+      <td>${ult?estadoBadge(ult.estado):'<span class="badge b-gray">Sem dados</span>'}</td>
+    </tr>`;}).join('')}
+  </tbody></table></div>`;
+}
+
+// ═══════════════════════════════════
+// ACTIONS
+// ═══════════════════════════════════
+
+function salvarPac(){
+  const nome  = document.getElementById('p-nome').value.trim();
+  const leito = document.getElementById('p-leito').value.trim();
+  if(!nome||!leito){toast('Preencha nome e leito','⚠');return;}
+  pacientes.push({id:Date.now(),nome,leito,admissao:hojeStr(),
+    diag:document.getElementById('p-diag').value,
+    alerg:document.getElementById('p-alerg').value||'NKDA',
+    status:'internado',nasc:document.getElementById('p-nasc').value,
+    obs:document.getElementById('p-obs').value});
+  ['p-nome','p-leito','p-alerg','p-obs'].forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});
+  cm('m-pac'); refresh(); toast(`${nome} admitido!`,'✓');
+}
+
+function salvarRx(){
+  const pacId = parseInt(document.getElementById('rx-pac').value);
+  const med   = document.getElementById('rx-med').value;
+  if(!pacId||!med){toast('Selecione paciente e medicamento','⚠');return;}
+  const pac = pacientes.find(p=>p.id===pacId);
+  const id  = 'RX-'+String(prescricoes.length+1).padStart(3,'0');
+  prescricoes.unshift({id,pacId,pacNome:pac.nome,leito:pac.leito,med,
+    via:document.getElementById('rx-via').value,
+    dose:document.getElementById('rx-dose').value||'—',
+    freq:document.getElementById('rx-freq').value,
+    dur:document.getElementById('rx-dur').value||'—',
+    medico:currentUser.nome,dt:nowStr(),status:'ativa',
+    obs:document.getElementById('rx-obs').value});
+  historico.unshift({dt:nowStr(),tipo:'Prescrição',pac:pac.nome,med,resp:currentUser.nome,obs:'Prescrita'});
+  cm('m-rx'); refresh(); updateBadges(); toast(`Prescrição ${id} criada!`,'📋');
+}
+
+function salvarFunc(){
+  const nome  = document.getElementById('f-nome').value.trim();
+  const email = document.getElementById('f-email').value.trim();
+  const cargo = document.getElementById('f-cargo').value;
+  const reg   = document.getElementById('f-reg').value;
+  const senha = getSenhaGerada();
+  if(!nome||!email){toast('Preencha nome e e-mail','⚠');return;}
+  if(!senha){toast('Preencha nome e data de nascimento para gerar a senha','⚠');return;}
+  if(funcionarios.find(f=>f.email.toLowerCase()===email.toLowerCase())){toast('E-mail já cadastrado','⚠');return;}
+  funcionarios.push({id:'u'+Date.now(),nome,email,senha,cargo,reg,ativo:true,primeiroAcesso:true});
+  ['f-nome','f-email','f-reg'].forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});
+  document.getElementById('f-nasc').value='';
+  document.getElementById('senha-preview').textContent='—';
+  cm('m-func'); refresh();
+  toast(`${nome} cadastrado! Senha: ${senha}`,'✓');
+}
+
+function toggleFunc(id){
+  const f = funcionarios.find(x=>x.id===id);
+  if(!f) return;
+  f.ativo = !f.ativo;
+  refresh();
+  toast(`${f.nome} ${f.ativo?'reativado':'desativado'}!`,f.ativo?'✓':'🚫');
+}
+
+function abrirAlta(pacId){
+  const p = pacientes.find(x=>x.id===pacId);
+  window._altaId = pacId;
+  document.getElementById('alta-info').innerHTML=`
+    <div class="pac-hdr"><div class="pac-av">${p.nome[0]}</div>
+    <div><div class="pac-name">${p.nome}</div>
+    <div class="pac-info">Leito ${p.leito} · ${dias(p.admissao)} dias internado</div></div></div>`;
+  om('m-alta');
+}
+
+function confirmarAlta(){
+  const p = pacientes.find(x=>x.id===window._altaId);
+  p.status='alta'; p.dataAlta=hojeStr();
+  p.tipoAlta  = document.getElementById('alta-tipo').value;
+  p.resumoAlta= document.getElementById('alta-resumo').value||'—';
+  historico.unshift({dt:nowStr(),tipo:'Alta',pac:p.nome,med:'—',resp:currentUser.nome,obs:p.tipoAlta});
+  cm('m-alta'); refresh(); toast(`Alta de ${p.nome} registrada!`,'🏠');
+}
+
+function abrirDisp(id){
+  window._dispId = id;
+  const p   = prescricoes.find(x=>x.id===id);
+  const pac = pacientes.find(x=>x.id===p.pacId);
+  document.getElementById('disp-body').innerHTML=`
+    <div class="alert a-warn">⚠️ Alergias: <strong>${pac?.alerg||'NKDA'}</strong></div>
+    <div class="drow"><span class="dkey">Paciente</span><span class="dval">${p.pacNome}</span></div>
+    <div class="drow"><span class="dkey">Medicamento</span><span class="dval">${p.med}</span></div>
+    <div class="drow"><span class="dkey">Dose / Via</span><span class="dval mono">${p.dose} · ${p.via}</span></div>
+    <div class="drow"><span class="dkey">Frequência</span><span class="dval">${p.freq}</span></div>
+    <div style="margin-top:12px"><div class="fgrp"><label class="flabel">Farmacêutico</label>
+    <input class="fi" value="${currentUser.nome}" id="disp-farma" style="width:100%"/></div></div>`;
+  om('m-disp');
+}
+
+function confirmarDisp(){
+  const p = prescricoes.find(x=>x.id===window._dispId);
+  p.status='dispensada';
+  historico.unshift({dt:nowStr(),tipo:'Dispensação',pac:p.pacNome,med:p.med,
+    resp:document.getElementById('disp-farma').value,obs:`Dispensada ${p.id}`});
+  cm('m-disp'); refresh(); updateBadges(); toast(`${p.med} dispensado!`,'💊');
+}
+
+function abrirAdm(id){
+  window._admId = id;
+  const p   = prescricoes.find(x=>x.id===id);
+  const pac = pacientes.find(x=>x.id===p.pacId);
+  document.getElementById('adm-body').innerHTML=`
+    <div class="alert a-info">🩺 Confirme identificação do paciente.</div>
+    <div class="drow"><span class="dkey">Paciente</span><span class="dval">${p.pacNome}</span></div>
+    <div class="drow"><span class="dkey">Alergias</span><span class="dval" style="color:var(--red)">${pac?.alerg||'NKDA'}</span></div>
+    <div class="drow"><span class="dkey">Medicamento</span><span class="dval">${p.med}</span></div>
+    <div class="drow"><span class="dkey">Dose / Via</span><span class="dval mono">${p.dose} · ${p.via}</span></div>
+    <div style="margin-top:12px"><div class="fg">
+      <div class="fgrp"><label class="flabel">Enfermeiro(a)</label><input class="fi" value="${currentUser.nome}" id="adm-enf"/></div>
+      <div class="fgrp"><label class="flabel">Horário</label><input class="fi" type="time" id="adm-hora" value="${new Date().toTimeString().slice(0,5)}"/></div>
+      <div class="fgrp ff"><label class="flabel">Intercorrências</label><input class="fi" id="adm-obs" placeholder="Nenhuma..."/></div>
+    </div></div>`;
+  om('m-adm');
+}
+
+function confirmarAdm(){
+  const p = prescricoes.find(x=>x.id===window._admId);
+  p.status='administrada';
+  historico.unshift({dt:nowStr(),tipo:'Administração',pac:p.pacNome,med:p.med,
+    resp:document.getElementById('adm-enf').value,
+    obs:document.getElementById('adm-obs').value||'Sem intercorrências'});
+  cm('m-adm'); refresh(); updateBadges(); toast(`Administração registrada!`,'🩺');
+}
+
+function abrirRelat(pacId){
+  fillPacSel('r-pac');
+  setTimeout(()=>{
+    if(pacId){const s=document.getElementById('r-pac');if(s)s.value=pacId;}
+  },60);
+  om('m-relat');
+}
+
+function salvarRelat(){
+  const pacId = parseInt(document.getElementById('r-pac').value);
+  if(!pacId){toast('Selecione o paciente','⚠');return;}
+  const pac = pacientes.find(p=>p.id===pacId);
+  relatoriosEnf.push({
+    pacId,pacNome:pac.nome,leito:pac.leito,
+    turno:document.getElementById('r-turno').value,
+    data:hojeStr(),
+    pa:document.getElementById('r-pa').value,
+    fc:document.getElementById('r-fc').value,
+    temp:document.getElementById('r-temp').value,
+    spo2:document.getElementById('r-spo2').value,
+    estado:document.getElementById('r-estado').value,
+    obs:document.getElementById('r-obs').value,
+    inter:document.getElementById('r-inter').value,
+    resp:currentUser.nome,
+  });
+  cm('m-relat'); refresh(); toast(`Relatório salvo para ${pac.nome}!`,'📝');
+}
+
+function verRelatsPac(pacId){
+  const p = pacientes.find(x=>x.id===pacId);
+  const relats = relatoriosEnf.filter(r=>r.pacId===pacId);
+  document.getElementById('verrelat-body').innerHTML=`
+    <div class="pac-hdr"><div class="pac-av">${p.nome[0]}</div>
+    <div><div class="pac-name">${p.nome}</div>
+    <div class="pac-info">Leito ${p.leito} · ${dias(p.admissao)} dias internado</div></div></div>
+    ${relats.length===0
+      ?'<div style="text-align:center;padding:30px;color:var(--text3)">Nenhum relatório para este paciente</div>'
+      :relats.map(r=>`<div class="rc">
+        <div class="rc-title">📝 ${r.data} — ${r.turno} ${estadoBadge(r.estado)} <span class="badge b-purple">${r.resp}</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div class="drow"><span class="dkey">PA</span><span class="dval mono">${r.pa||'—'}</span></div>
+          <div class="drow"><span class="dkey">FC</span><span class="dval mono">${r.fc?r.fc+' bpm':'—'}</span></div>
+          <div class="drow"><span class="dkey">Temp.</span><span class="dval mono">${r.temp?r.temp+'°C':'—'}</span></div>
+          <div class="drow"><span class="dkey">SpO2</span><span class="dval mono">${r.spo2?r.spo2+'%':'—'}</span></div>
+        </div>
+        ${r.obs?`<div style="font-size:12px;margin-top:6px"><strong>Evolução:</strong> ${r.obs}</div>`:''}
+        ${r.inter?`<div style="font-size:12px;margin-top:4px;color:var(--yellow)"><strong>Intercorrências:</strong> ${r.inter}</div>`:''}
+      </div>`).join('')}`;
+  om('m-verrelat');
+}
+
+function verRx(id){
+  const p = prescricoes.find(x=>x.id===id);
+  document.getElementById('rxdet-body').innerHTML=`
+    <div class="pac-hdr"><div class="pac-av">${p.pacNome[0]}</div>
+    <div><div class="pac-name">${p.pacNome}</div><div class="pac-info">Leito ${p.leito} · ${p.id}</div></div>
+    <div style="margin-left:auto">${sbadge(p.status)}</div></div>
+    <div class="drow"><span class="dkey">Medicamento</span><span class="dval">${p.med}</span></div>
+    <div class="drow"><span class="dkey">Via</span><span class="dval">${p.via}</span></div>
+    <div class="drow"><span class="dkey">Dose</span><span class="dval">${p.dose}</span></div>
+    <div class="drow"><span class="dkey">Frequência</span><span class="dval">${p.freq}</span></div>
+    <div class="drow"><span class="dkey">Duração</span><span class="dval">${p.dur}</span></div>
+    <div class="drow"><span class="dkey">Médico</span><span class="dval">${p.medico}</span></div>
+    <div class="drow"><span class="dkey">Data/Hora</span><span class="dval mono">${p.dt}</span></div>
+    ${p.obs?`<div class="drow"><span class="dkey">Obs.</span><span class="dval">${p.obs}</span></div>`:''}
+    <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
+      <div class="flabel" style="margin-bottom:8px;display:block">Linha do tempo</div>
+      <div class="tl-item"><div class="tl-dot" style="background:var(--blue)"></div><div class="tl-txt"><strong>Prescrita</strong> — ${p.medico}<br><span class="tl-time">${p.dt}</span></div></div>
+      ${p.status==='dispensada'||p.status==='administrada'?`<div class="tl-item"><div class="tl-dot" style="background:var(--green)"></div><div class="tl-txt"><strong>Dispensada</strong> — Farmácia</div></div>`:''}
+      ${p.status==='administrada'?`<div class="tl-item"><div class="tl-dot" style="background:var(--purple)"></div><div class="tl-txt"><strong>Administrada</strong> — Enfermagem</div></div>`:''}
+    </div>`;
+  om('m-rxdet');
+}
+
+// ═══════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════
+function dias(admStr){
+  const [d,m,a]=admStr.split('/').map(Number);
+  return Math.floor((TODAY-new Date(a,m-1,d))/86400000);
+}
+function dBadge(admStr){
+  const d=dias(admStr);
+  return `<span class="dias-badge ${d<=7?'d-ok':d<=20?'d-med':'d-long'}">${d}d</span>`;
+}
+function sbadge(s){
+  const m={ativa:'b-blue',dispensada:'b-green',administrada:'b-purple',alta:'b-gray'};
+  const l={ativa:'Ativa',dispensada:'Dispensada',administrada:'Administrada',alta:'Alta'};
+  return `<span class="badge ${m[s]||'b-gray'}">${l[s]||s}</span>`;
+}
+function estadoBadge(e){
+  if(e.includes('BEG')) return '<span class="badge b-green">BEG</span>';
+  if(e.includes('REG')) return '<span class="badge b-yellow">REG</span>';
+  return '<span class="badge b-red">MEG</span>';
+}
+function tipoHist(t){
+  const map={'Prescrição':'b-blue','Dispensação':'b-green','Administração':'b-purple','Alta':'b-orange'};
+  return `<span class="badge ${map[t]||'b-gray'}">${t}</span>`;
+}
+function cargoLabel(c){return {medico:'Médico',farmacia:'Farmacêutico',enfermagem:'Enfermeiro',admin:'Admin'}[c]||c;}
+function cargoColor(c){return {medico:'var(--blue-dim)',farmacia:'var(--green-dim)',enfermagem:'var(--purple-dim)',admin:'var(--yellow-dim)'}[c]||'var(--surface2)';}
+function hojeStr(){return '28/04/2026';}
+function nowStr(){const n=new Date();return `${hojeStr()} ${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;}
+function fillPacSel(selId){
+  setTimeout(()=>{
+    const s=document.getElementById(selId);
+    if(!s)return;
+    s.innerHTML='<option value="">Selecionar...</option>'+
+      pacientes.filter(p=>p.status==='internado').map(p=>`<option value="${p.id}">${p.nome} — ${p.leito}</option>`).join('');
+  },30);
+}
+function updateBadges(){
+  const atv  = prescricoes.filter(p=>p.status==='ativa').length;
+  const admP = prescricoes.filter(p=>p.status==='dispensada').length;
+  [['badge-presc',atv],['badge-disp',atv],['badge-adminPend',admP]].forEach(([id,v])=>{
+    const el=document.getElementById(id);if(el)el.textContent=v;
+  });
+}
+function refresh(){
+  const act=document.querySelector('.nav-item.active');
+  if(act) showPanel(act.id.replace('nav-',''));
+}
+function handleTopBtn(){
+  const c=currentUser?.cargo;
+  if(c==='medico') om('m-rx');
+  else if(c==='admin') om('m-func');
+  else if(c==='enfermagem') om('m-pac');
+  else toast('Use os botões de ação da página','ℹ');
+}
+function handleSearch(){
+  const q=document.getElementById('search-input').value.toLowerCase().trim();
+  if(!q)return;
+  const found=pacientes.filter(p=>p.nome.toLowerCase().includes(q));
+  if(found.length) toast(`${found.length} paciente(s) encontrado(s)`,'🔍');
+}
+function om(id){document.getElementById(id).classList.add('open');}
+function cm(id){document.getElementById(id).classList.remove('open');}
+function toast(msg,icon='✓'){
+  const a=document.getElementById('toast-area');
+  const t=document.createElement('div');
+  t.className='toast';
+  t.innerHTML=`<span>${icon}</span>${msg}`;
+  a.appendChild(t);
+  setTimeout(()=>t.remove(),3500);
+}
+document.querySelectorAll('.modal-overlay').forEach(o=>{
+  o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');});
+});
+</script>
+</body>
+</html>

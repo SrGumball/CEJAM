@@ -1,0 +1,49 @@
+name: "Release"
+on:
+  push:
+    tags:
+      - 'v*' # Dispara quando você cria uma tag como v1.0.0
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macos-latest, ubuntu-22.04, windows-latest]
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: install frontend dependencies
+        run: npm install
+
+      - name: create admin key from secret
+        shell: bash
+        run: echo "${{ secrets.FIREBASE_ADMIN_KEY }}" > chave-admin.json
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: app-v__VERSION__ # Substituído automaticamente
+          releaseName: "Cejam Hospitalar v__VERSION__"
+          releaseBody: "Versão automatizada do Sistema Cejam."
+          releaseDraft: true
+          prerelease: false
