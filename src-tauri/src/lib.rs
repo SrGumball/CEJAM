@@ -8,6 +8,14 @@ pub struct ResetResponse {
     message: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LoginResponse {
+    pub success: bool,
+    pub message: String,
+    pub uid: Option<String>,
+    pub id_token: Option<String>,
+}
+
 #[tauri::command]
 async fn cmd_admin_reset_password(email: String, nova_senha: String) -> Result<ResetResponse, String> {
     // A chave agora é embutida diretamente no executável durante a compilação
@@ -71,11 +79,59 @@ async fn cmd_admin_reset_password(email: String, nova_senha: String) -> Result<R
     }
 }
 
+#[tauri::command]
+async fn cmd_login_nativo(email: String, senha: String) -> Result<LoginResponse, String> {
+    let api_key = "AIzaSyBqFgKVfW80CPTGXmUjuQ6uhyRZRbjW4cI";
+    let url = format!("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={}", api_key);
+    
+    let client = Client::new();
+    let body = serde_json::json!({
+        "email": email,
+        "password": senha,
+        "returnSecureToken": true
+    });
+
+    let res = client.post(&url)
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| format!("Falha na conexão com o servidor: {}", e))?;
+
+    let status = res.status();
+    let data: serde_json::Value = res.json().await.map_err(|e| format!("Erro ao processar resposta: {}", e))?;
+
+    if status.is_success() {
+        Ok(LoginResponse {
+            success: true,
+            message: "Login realizado com sucesso!".to_string(),
+            uid: data["localId"].as_str().map(|s| s.to_string()),
+            id_token: data["idToken"].as_str().map(|s| s.to_string()),
+        })
+    } else {
+        let err_msg = data["error"]["message"].as_str().unwrap_or("Erro desconhecido");
+        let user_msg = match err_msg {
+            "EMAIL_NOT_FOUND" | "INVALID_PASSWORD" | "INVALID_LOGIN_CREDENTIALS" => "E-mail ou senha incorretos.",
+            "USER_DISABLED" => "Este usuário foi desativado.",
+            "TOO_MANY_ATTEMPTS_TRY_LATER" => "Muitas tentativas. Tente mais tarde.",
+            _ => err_msg,
+        };
+        Ok(LoginResponse {
+            success: false,
+            message: user_msg.to_string(),
+            uid: None,
+            id_token: None,
+        })
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
-        .invoke_handler(tauri::generate_handler![cmd_admin_reset_password])
+        .invoke_handler(tauri::generate_handler![
+            cmd_admin_reset_password,
+            cmd_login_nativo
+        ])
         .run(tauri::generate_context!())
         .expect("Erro ao iniciar aplicação CEJAM");
 }
