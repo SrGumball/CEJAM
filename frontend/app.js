@@ -131,13 +131,19 @@ async function doLogin(){
     const uid = res.uid;
     console.log("2. Login Nativo OK. UID:", uid);
 
-    console.log("3. Buscando Perfil no Banco...");
+    console.log("3. Obtendo Token de Acesso (Bridge)...");
+    const customToken = await window.__TAURI__.core.invoke('cmd_obter_custom_token', { uid });
+    
+    console.log("4. Autenticando SDK Javascript...");
+    await fb.auth.signInWithCustomToken(customToken);
+
+    console.log("5. Buscando Perfil no Banco...");
     const userDoc = await fb.db.collection("funcionarios").doc(email).get();
     
     if (userDoc.exists) {
       currentUser = userDoc.data();
       currentUser.id = uid;
-      console.log("4. Login com sucesso para:", currentUser.nome);
+      console.log("6. Login com sucesso para:", currentUser.nome);
       await entrarNoSistema();
     } else {
       // Caso especial: Criar admin se for o e-mail do dono

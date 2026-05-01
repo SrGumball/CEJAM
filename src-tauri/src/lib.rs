@@ -30,6 +30,16 @@ pub struct PrescriptionData {
     pub data: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CustomTokenClaims {
+    pub iss: String,
+    pub sub: String,
+    pub aud: String,
+    pub iat: u64,
+    pub exp: u64,
+    pub uid: String,
+}
+
 #[tauri::command]
 async fn cmd_admin_reset_password(email: String, nova_senha: String) -> Result<ResetResponse, String> {
     // A chave agora é embutida diretamente no executável durante a compilação
@@ -139,6 +149,38 @@ async fn cmd_login_nativo(email: String, senha: String) -> Result<LoginResponse,
 }
 
 #[tauri::command]
+async fn cmd_obter_custom_token(uid: String) -> Result<String, String> {
+    let key_data = include_str!("../../chave-admin.json");
+    let key_val: serde_json::Value = serde_json::from_str(key_data).map_err(|e| e.to_string())?;
+    
+    let client_email = key_val["client_email"].as_str().ok_or("Email do client não encontrado na chave")?;
+    let private_key = key_val["private_key"].as_str().ok_or("Chave privada não encontrada")?;
+
+    let iat = chrono::Utc::now().timestamp() as u64;
+    let exp = iat + 3600; // 1 hora de validade
+
+    let claims = CustomTokenClaims {
+        iss: client_email.to_string(),
+        sub: client_email.to_string(),
+        aud: "https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit".to_string(),
+        iat,
+        exp,
+        uid,
+    };
+
+    let mut header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::RS256);
+    header.kid = key_val["private_key_id"].as_str().map(|s| s.to_string());
+
+    let token = jsonwebtoken::encode(
+        &header,
+        &claims,
+        &jsonwebtoken::EncodingKey::from_rsa_pem(private_key.as_bytes()).map_err(|e| e.to_string())?,
+    ).map_err(|e| e.to_string())?;
+
+    Ok(token)
+}
+
+#[tauri::command]
 async fn cmd_gerar_prescricao_pdf(data: PrescriptionData) -> Result<String, String> {
     // 1. Carregar Fonte (DejaVuSans é padrão no Linux)
     let font_family = genpdf::fonts::from_files("/usr/share/fonts/truetype/dejavu", "DejaVuSans", None)
@@ -213,7 +255,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             cmd_admin_reset_password,
             cmd_login_nativo,
-            cmd_gerar_prescricao_pdf
+            cmd_gerar_prescricao_pdf,
+            cmd_obter_custom_token
         ])
         .run(tauri::generate_context!())
         .expect("Erro ao iniciar aplicação CEJAM");
