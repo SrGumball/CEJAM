@@ -1,13 +1,6 @@
 // ═══════════════════════════════════════════
-// CEJAM — Configuração Firebase (Pure Cloud)
+// CEJAM — Configuração Firebase (Compat Mode)
 // ═══════════════════════════════════════════
-
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js';
-import { getAuth } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
-import { 
-  getFirestore, collection, doc, addDoc, setDoc, updateDoc, 
-  getDocs, getDoc, query, where, orderBy, onSnapshot, serverTimestamp 
-} from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBqFgKVfW80CPTGXmUjuQ6uhyRZRbjW4cI",
@@ -18,22 +11,20 @@ const firebaseConfig = {
   appId: "1:93573813305:web:53d6499abc72623007a9e8"
 };
 
-// Inicialização
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+// Inicialização (se ainda não foi inicializado)
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
 
-// Instância secundária para criar usuários sem deslogar o admin
-const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
-const secondaryAuth = getAuth(secondaryApp);
+const auth = firebase.auth();
+const db = firebase.firestore();
 
 // Exportar para uso em outros módulos e no escopo global
 export const fb = { 
-  auth, db, app, secondaryAuth,
-  // Funções do SDK para uso direto
-  collection, doc, addDoc, setDoc, updateDoc, getDocs, getDoc, 
-  query, where, orderBy, onSnapshot, serverTimestamp 
+  auth, db, 
+  // Funções helpers para manter compatibilidade com o app.js
+  serverTimestamp: firebase.firestore.FieldValue.serverTimestamp
 };
-window.fb = fb;
 
-console.log("🔥 Firebase Cloud Native Inicializado");
+window.fb = fb;
+console.log("🔥 Firebase Cloud (Compat) Inicializado");

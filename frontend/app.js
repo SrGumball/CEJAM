@@ -117,19 +117,17 @@ async function doLogin(){
   
   try {
     console.log("1. Iniciando Autenticação...");
-    const { signInWithEmailAndPassword } = await import('https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js');
-    
-    // Autenticação com Timeout de 15 segundos para evitar travamento infinito
-    const loginPromise = signInWithEmailAndPassword(fb.auth, email, senha);
+    // Usando a versão compat para garantir funcionamento no executável
+    const loginPromise = firebase.auth().signInWithEmailAndPassword(email, senha);
     const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Tempo de conexão esgotado. Verifique sua internet.")), 15000));
     
     const userCred = await Promise.race([loginPromise, timeoutPromise]);
     const uid = userCred.user.uid;
 
     console.log("2. Buscando Perfil no Banco...");
-    const userDoc = await fb.getDoc(fb.doc(fb.db, "funcionarios", email));
+    const userDoc = await fb.db.collection("funcionarios").doc(email).get();
     
-    if (userDoc.exists()) {
+    if (userDoc.exists) {
       currentUser = userDoc.data();
       currentUser.id = uid;
       console.log("3. Login com sucesso para:", currentUser.nome);
@@ -138,7 +136,7 @@ async function doLogin(){
       // Caso especial: Criar admin se for o e-mail do dono
       if (email === "alefdias44@cejam.com") {
         currentUser = { id: uid, nome: "Alef Dias", email, cargo: "admin", ativo: true, primeiro_acesso: false };
-        await fb.setDoc(fb.doc(fb.db, "funcionarios", email), { ...currentUser, criado_em: fb.serverTimestamp() });
+        await fb.db.collection("funcionarios").doc(email).set({ ...currentUser, criado_em: fb.serverTimestamp() });
         await entrarNoSistema();
       } else {
         throw new Error("Perfil não encontrado no sistema.");
@@ -183,15 +181,13 @@ async function salvarNovaSenha(){
   if(s1 !== s2) { toast("As senhas não coincidem","⚠","error"); return; }
   
   try {
-    const { updatePassword } = await import('https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js');
-    
     toast("Atualizando segurança...", "⏳", "info");
     
     // 1. Atualiza no Auth
-    await updatePassword(fb.auth.currentUser, s1);
+    await fb.auth.currentUser.updatePassword(s1);
     
     // 2. Atualiza no Firestore
-    await fb.updateDoc(fb.doc(fb.db, "funcionarios", currentUser.email), {
+    await fb.db.collection("funcionarios").doc(currentUser.email).update({
       primeiro_acesso: false
     });
     
@@ -204,7 +200,7 @@ async function salvarNovaSenha(){
     if(e.code === 'auth/requires-recent-login') {
       toast("Sessão expirada. Saia e entre novamente para mudar a senha.", "⚠", "error");
     } else {
-      toast("Erro ao atualizar senha.", "⚠", "error");
+      toast("Erro ao atualizar senha: " + e.message, "⚠", "error");
     }
   }
 }
@@ -218,31 +214,29 @@ function doLogout(){
 
 // ── DATA LOADING (REAL-TIME) ────────────────
 function setupRealtime(){
-  const { query, collection, onSnapshot, orderBy } = fb;
-  
-  // Listeners para atualização automática do STATE e UI
-  onSnapshot(query(collection(fb.db, "pacientes"), orderBy("criado_em", "desc")), snap => {
+  // Listeners para atualização automática do STATE e UI usando padrão Compat
+  fb.db.collection("pacientes").orderBy("criado_em", "desc").onSnapshot(snap => {
     STATE.pacientes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     refreshUI();
   });
 
-  onSnapshot(query(collection(fb.db, "prescricoes"), orderBy("criado_em", "desc")), snap => {
+  fb.db.collection("prescricoes").orderBy("criado_em", "desc").onSnapshot(snap => {
     STATE.prescricoes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     refreshUI();
   });
 
-  onSnapshot(query(collection(fb.db, "relatorios"), orderBy("criado_em", "desc")), snap => {
+  fb.db.collection("relatorios").orderBy("criado_em", "desc").onSnapshot(snap => {
     STATE.relatorios = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     refreshUI();
   });
 
-  onSnapshot(query(collection(fb.db, "historico"), orderBy("criado_em", "desc")), snap => {
+  fb.db.collection("historico").orderBy("criado_em", "desc").onSnapshot(snap => {
     STATE.historico = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     refreshUI();
   });
 
   if (currentUser.cargo === 'admin') {
-    onSnapshot(collection(fb.db, "funcionarios"), snap => {
+    fb.db.collection("funcionarios").onSnapshot(snap => {
       STATE.funcionarios = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       refreshUI();
     });
@@ -793,7 +787,7 @@ function pEnfSV(){
 // ── ACTIONS ────────────────────────────────
 async function logAction(tipo, pacNome, med, obs) {
   try {
-    await fb.addDoc(fb.collection(fb.db, "historico"), {
+    await fb.db.collection("historico").add({
       tipo, pac_nome: pacNome, medicamento: med || '—', 
       responsavel: currentUser.nome, observacoes: obs,
       criado_em: fb.serverTimestamp()
@@ -816,7 +810,7 @@ async function salvarPac(){
       admissao: new Date().toLocaleDateString('pt-BR'),
       criado_em: fb.serverTimestamp()
     };
-    await fb.addDoc(fb.collection(fb.db, "pacientes"), pacData);
+    await fb.db.collection("pacientes").add(pacData);
     
     await logAction('Admissão', nome, null, `Admitido no leito ${leito}`);
     
@@ -847,7 +841,7 @@ async function salvarAlteracaoRx() {
 
   try {
     const p = STATE.prescricoes.find(x => x.id === id);
-    await fb.updateDoc(fb.doc(fb.db, "prescricoes", id), {
+    await fb.db.collection("prescricoes").doc(id).update({
       dose, frequencia: freq, duracao: dur, observacoes: obs, status: 'ativa'
     });
     
@@ -875,7 +869,7 @@ async function salvarRx(){
       status: 'ativa', medico: currentUser.nome,
       criado_em: fb.serverTimestamp()
     };
-    await fb.addDoc(fb.collection(fb.db, "prescricoes"), rxData);
+    await fb.db.collection("prescricoes").add(rxData);
     await logAction('Prescrição', pac.nome, med, 'Prescrita');
     
     cm('m-rx'); toast('Prescrição criada!','📋','ok');
@@ -897,14 +891,16 @@ async function salvarFunc(){
     toast("Criando acesso no Firebase...", "⏳", "info");
 
     // 1. Criar no Firebase Auth usando a instância secundária (para não deslogar o admin)
-    const userCred = await createUserWithEmailAndPassword(fb.secondaryAuth, email, senha);
+    // No modo compat, criamos uma nova instância se necessário
+    const secondaryApp = firebase.apps.find(a => a.name === "SecondaryApp") || firebase.initializeApp(firebase.app().options, "SecondaryApp");
+    const userCred = await secondaryApp.auth().createUserWithEmailAndPassword(email, senha);
     const uid = userCred.user.uid;
     
     // Desloga a instância secundária imediatamente
-    await signOut(fb.secondaryAuth);
+    await secondaryApp.auth().signOut();
 
     // 2. Criar perfil no Firestore usando o e-mail como ID
-    await fb.setDoc(fb.doc(fb.db, "funcionarios", email), {
+    await fb.db.collection("funcionarios").doc(email).set({
       nome, email, cargo, registro,
       data_nascimento: $('f-nasc').value, // Salva para permitir resets futuros
       uid, // Salvamos o UID real do Firebase para segurança
@@ -929,7 +925,7 @@ async function salvarFunc(){
 async function toggleFunc(id){
   try {
     const f = STATE.funcionarios.find(x => x.id === id);
-    await fb.updateDoc(fb.doc(fb.db, "funcionarios", f.email), { ativo: !f.ativo });
+    await fb.db.collection("funcionarios").doc(f.email).update({ ativo: !f.ativo });
     toast('Status atualizado!','✓','ok');
   } catch(e){ toast("Erro ao atualizar status",'⚠','error'); }
 }
@@ -977,7 +973,7 @@ async function confirmarAlterarSenhaManual(){
 
     if (res.success) {
       // Como o Admin já definiu a senha final, marcamos como JÁ TROCADA
-      await fb.updateDoc(fb.doc(fb.db, "funcionarios", f.email), { 
+      await fb.db.collection("funcionarios").doc(f.email).update({ 
         primeiro_acesso: false 
       });
       toast("Senha alterada com sucesso!", "✓", "ok");
@@ -1003,7 +999,7 @@ async function confirmarAlta(){
   try {
     const p = STATE.pacientes.find(x => x.id === _altaId);
     const tipo = $('alta-tipo').value;
-    await fb.updateDoc(fb.doc(fb.db, "pacientes", _altaId), {
+    await fb.db.collection("pacientes").doc(_altaId).update({
       status: 'alta',
       data_alta: new Date().toLocaleDateString('pt-BR'),
       tipo_alta: tipo,
@@ -1031,7 +1027,7 @@ function abrirDisp(id){
 async function confirmarDisp(){
   try {
     const p = STATE.prescricoes.find(x => x.id === _dispId);
-    await fb.updateDoc(fb.doc(fb.db, "prescricoes", _dispId), { status: 'dispensada' });
+    await fb.db.collection("prescricoes").doc(_dispId).update({ status: 'dispensada' });
     await logAction('Dispensação', p.pac_nome, p.medicamento, `Dispensada ${p.id}`);
     cm('m-disp'); toast('Medicamento dispensado!','💊','ok');
   } catch(e){ toast("Erro na dispensação",'⚠','error'); }
@@ -1058,7 +1054,7 @@ function abrirAdm(id){
 async function confirmarAdm(){
   try {
     const p = STATE.prescricoes.find(x => x.id === _admId);
-    await fb.updateDoc(fb.doc(fb.db, "prescricoes", _admId), { status: 'administrada' });
+    await fb.db.collection("prescricoes").doc(_admId).update({ status: 'administrada' });
     
     const obs = $('adm-obs')?.value || 'Sem intercorrências';
     await logAction('Administração', p.pac_nome, p.medicamento, obs);
@@ -1087,7 +1083,7 @@ async function salvarRelat(){
       intercorrencias: $('r-inter').value || '', responsavel: currentUser.nome,
       criado_em: fb.serverTimestamp()
     };
-    await fb.addDoc(fb.collection(fb.db, "relatorios"), relatData);
+    await fb.db.collection("relatorios").add(relatData);
     cm('m-relat'); toast('Relatório salvo!','📝','ok');
   } catch(e){ toast("Erro ao salvar relatório",'⚠','error'); }
 }
@@ -1142,9 +1138,8 @@ function verRx(id){
   fb.auth.onAuthStateChanged(async (user) => {
     if (user) {
       console.log("Sessão ativa:", user.email);
-      const { getDoc, doc } = fb;
-      const userDoc = await getDoc(doc(fb.db, "funcionarios", user.email));
-      if (userDoc.exists()) {
+      const userDoc = await fb.db.collection("funcionarios").doc(user.email).get();
+      if (userDoc.exists) {
         currentUser = userDoc.data();
         await entrarNoSistema();
       } else {
