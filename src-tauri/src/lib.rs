@@ -1,8 +1,8 @@
 use serde::{Serialize, Deserialize};
-use yup_oauth2::{ServiceAccountKey, ServiceAccountAuthenticator};
+use yup_oauth2::{ServiceAccountAuthenticator};
 use reqwest::Client;
-use std::io::Cursor;
 use base64::{Engine as _, engine::general_purpose};
+use genpdf::{Element, Alignment};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ResetResponse {
@@ -170,33 +170,33 @@ async fn cmd_gerar_prescricao_pdf(data: PrescriptionData) -> Result<String, Stri
         .styled(genpdf::style::Style::new().bold().with_font_size(10)));
     
     let mut table = genpdf::elements::TableLayout::new(vec![3, 1, 1, 2]);
-    table.set_cell_decorator(genpdf::elements::FrameCellDecorator::new());
+    table.set_cell_decorator(genpdf::elements::FrameCellDecorator::new(true, true, false));
     
     table.row()
         .element(genpdf::elements::Paragraph::new("Medicamento").styled(genpdf::style::Style::new().bold()))
         .element(genpdf::elements::Paragraph::new("Dose").styled(genpdf::style::Style::new().bold()))
         .element(genpdf::elements::Paragraph::new("Via").styled(genpdf::style::Style::new().bold()))
         .element(genpdf::elements::Paragraph::new("Frequência").styled(genpdf::style::Style::new().bold()))
-        .push().map_err(|e| e.to_string())?;
+        .push();
 
     table.row()
         .element(genpdf::elements::Paragraph::new(&data.medicamento))
         .element(genpdf::elements::Paragraph::new(&data.dose))
         .element(genpdf::elements::Paragraph::new(&data.via))
         .element(genpdf::elements::Paragraph::new(&data.frequencia))
-        .push().map_err(|e| e.to_string())?;
+        .push();
 
     doc.push(table);
     doc.push(genpdf::elements::Break::new(2.0));
 
     // 6. Rodapé / Assinatura
     doc.push(genpdf::elements::Paragraph::new("________________________________________________")
-        .aligned(genpdf::alignment::Alignment::Center));
+        .aligned(Alignment::Center));
     doc.push(genpdf::elements::Paragraph::new(format!("Dr(a). {}", data.medico))
-        .aligned(genpdf::alignment::Alignment::Center));
+        .aligned(Alignment::Center));
     doc.push(genpdf::elements::Paragraph::new("Assinatura e Carimbo")
-        .styled(genpdf::style::Style::new().with_font_size(8))
-        .aligned(genpdf::alignment::Alignment::Center));
+        .aligned(Alignment::Center)
+        .styled(genpdf::style::Style::new().with_font_size(8)));
 
     // 7. Gerar Buffer e retornar Base64
     let mut buffer = Vec::new();
