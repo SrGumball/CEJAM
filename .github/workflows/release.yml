@@ -1,17 +1,19 @@
-name: "Release"
+name: "Release & Build"
 on:
   push:
+    branches:
+      - main
     tags:
-      - 'v*' # Dispara quando você cria uma tag como v1.0.0
+      - 'v*'
 
 jobs:
-  release:
+  publish:
     permissions:
       contents: write
     strategy:
       fail-fast: false
       matrix:
-        platform: [macos-latest, ubuntu-22.04, windows-latest]
+        platform: [ubuntu-22.04, windows-latest]
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -21,9 +23,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
 
       - name: install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-22.04'
@@ -36,14 +44,22 @@ jobs:
 
       - name: create admin key from secret
         shell: bash
-        run: echo "${{ secrets.FIREBASE_ADMIN_KEY }}" > chave-admin.json
+        run: |
+          if [ -z "${{ secrets.FIREBASE_ADMIN_KEY }}" ]; then
+            echo "AVISO: FIREBASE_ADMIN_KEY não configurada nos Secrets do GitHub."
+            # Cria um arquivo vazio apenas para o build não falhar se for teste, 
+            # mas o app não funcionará corretamente sem a chave real.
+            echo "{}" > chave-admin.json
+          else
+            echo "${{ secrets.FIREBASE_ADMIN_KEY }}" > chave-admin.json
+          fi
 
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: app-v__VERSION__ # Substituído automaticamente
-          releaseName: "Cejam Hospitalar v__VERSION__"
-          releaseBody: "Versão automatizada do Sistema Cejam."
+          tagName: v__VERSION__
+          releaseName: "CEJAM Hospitalar v__VERSION__"
+          releaseBody: "Build automatizada do sistema CEJAM."
           releaseDraft: true
           prerelease: false

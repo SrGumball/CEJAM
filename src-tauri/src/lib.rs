@@ -1,6 +1,8 @@
 use serde::{Serialize, Deserialize};
 use yup_oauth2::{ServiceAccountKey, ServiceAccountAuthenticator};
 use reqwest::Client;
+use std::io::Cursor;
+use base64::{Engine as _, engine::general_purpose};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ResetResponse {
@@ -14,6 +16,18 @@ pub struct LoginResponse {
     pub message: String,
     pub uid: Option<String>,
     pub id_token: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PrescriptionData {
+    pub paciente: String,
+    pub leito: String,
+    pub medicamento: String,
+    pub dose: String,
+    pub via: String,
+    pub frequencia: String,
+    pub medico: String,
+    pub data: String,
 }
 
 #[tauri::command]
@@ -124,13 +138,82 @@ async fn cmd_login_nativo(email: String, senha: String) -> Result<LoginResponse,
     }
 }
 
+#[tauri::command]
+async fn cmd_gerar_prescricao_pdf(data: PrescriptionData) -> Result<String, String> {
+    // 1. Carregar Fonte (DejaVuSans é padrão no Linux)
+    let font_family = genpdf::fonts::from_files("/usr/share/fonts/truetype/dejavu", "DejaVuSans", None)
+        .map_err(|e| format!("Erro ao carregar fonte: {}", e))?;
+
+    // 2. Criar Documento
+    let mut doc = genpdf::Document::new(font_family);
+    doc.set_title(format!("Prescrição - {}", data.paciente));
+    
+    let mut decorator = genpdf::SimplePageDecorator::new();
+    decorator.set_margins(10);
+    doc.set_page_decorator(decorator);
+
+    // 3. Cabeçalho
+    doc.push(genpdf::elements::Paragraph::new("CEJAM — SISTEMA HOSPITALAR")
+        .styled(genpdf::style::Style::new().bold().with_font_size(18)));
+    doc.push(genpdf::elements::Paragraph::new("RELATÓRIO DE PRESCRIÇÃO MÉDICA")
+        .styled(genpdf::style::Style::new().with_font_size(12)));
+    doc.push(genpdf::elements::Break::new(1.0));
+
+    // 4. Dados do Paciente
+    doc.push(genpdf::elements::Paragraph::new(format!("Paciente: {}", data.paciente)).styled(genpdf::style::Style::new().bold()));
+    doc.push(genpdf::elements::Paragraph::new(format!("Leito: {}", data.leito)));
+    doc.push(genpdf::elements::Paragraph::new(format!("Data: {}", data.data)));
+    doc.push(genpdf::elements::Break::new(1.0));
+
+    // 5. Detalhes da Medicação
+    doc.push(genpdf::elements::Paragraph::new("MEDICAMENTOS PRESCRITOS:")
+        .styled(genpdf::style::Style::new().bold().with_font_size(10)));
+    
+    let mut table = genpdf::elements::TableLayout::new(vec![3, 1, 1, 2]);
+    table.set_cell_decorator(genpdf::elements::FrameCellDecorator::new());
+    
+    table.row()
+        .element(genpdf::elements::Paragraph::new("Medicamento").styled(genpdf::style::Style::new().bold()))
+        .element(genpdf::elements::Paragraph::new("Dose").styled(genpdf::style::Style::new().bold()))
+        .element(genpdf::elements::Paragraph::new("Via").styled(genpdf::style::Style::new().bold()))
+        .element(genpdf::elements::Paragraph::new("Frequência").styled(genpdf::style::Style::new().bold()))
+        .push().map_err(|e| e.to_string())?;
+
+    table.row()
+        .element(genpdf::elements::Paragraph::new(&data.medicamento))
+        .element(genpdf::elements::Paragraph::new(&data.dose))
+        .element(genpdf::elements::Paragraph::new(&data.via))
+        .element(genpdf::elements::Paragraph::new(&data.frequencia))
+        .push().map_err(|e| e.to_string())?;
+
+    doc.push(table);
+    doc.push(genpdf::elements::Break::new(2.0));
+
+    // 6. Rodapé / Assinatura
+    doc.push(genpdf::elements::Paragraph::new("________________________________________________")
+        .aligned(genpdf::alignment::Alignment::Center));
+    doc.push(genpdf::elements::Paragraph::new(format!("Dr(a). {}", data.medico))
+        .aligned(genpdf::alignment::Alignment::Center));
+    doc.push(genpdf::elements::Paragraph::new("Assinatura e Carimbo")
+        .styled(genpdf::style::Style::new().with_font_size(8))
+        .aligned(genpdf::alignment::Alignment::Center));
+
+    // 7. Gerar Buffer e retornar Base64
+    let mut buffer = Vec::new();
+    doc.render(&mut buffer).map_err(|e| format!("Erro ao renderizar PDF: {}", e))?;
+    
+    Ok(general_purpose::STANDARD.encode(buffer))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             cmd_admin_reset_password,
-            cmd_login_nativo
+            cmd_login_nativo,
+            cmd_gerar_prescricao_pdf
         ])
         .run(tauri::generate_context!())
         .expect("Erro ao iniciar aplicação CEJAM");

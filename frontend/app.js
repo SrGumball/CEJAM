@@ -91,6 +91,9 @@ function tipoHist(t){
 }
 function cargoLabel(c){return {medico:'Médico',farmacia:'Farmacêutico',enfermagem:'Enfermeiro',tecnico:'Técnico',admin:'Admin'}[c]||c;}
 function cargoColor(c){return {medico:'var(--blue-dim)',farmacia:'var(--green-dim)',enfermagem:'var(--purple-dim)',tecnico:'var(--purple-dim)',admin:'var(--yellow-dim)'}[c]||'var(--surface2)';}
+function tipoHistCor(t){
+  return {'Prescrição':'var(--blue)','Dispensação':'var(--green)','Administração':'var(--purple)','Alta':'var(--orange)'}[t]||'var(--text3)';
+}
 
 // Clock
 function updateClock(){
@@ -438,10 +441,10 @@ function pAdmDash(){
   const inat=STATE.funcionarios.filter(f=>!f.ativo).length;
   return `<div class="sec-hdr"><div><div class="sec-title">Dashboard Administrativo</div><div class="sec-sub">Visão geral do sistema</div></div></div>
   <div class="sg4">
-    <div class="stat-card"><div class="stat-label">Internados</div><div class="stat-val" style="color:var(--blue)">${intern}</div></div>
-    <div class="stat-card"><div class="stat-label">Altas</div><div class="stat-val" style="color:var(--green)">${altas}</div></div>
-    <div class="stat-card"><div class="stat-label">Funcionários</div><div class="stat-val" style="color:var(--yellow)">${funcs}</div></div>
-    <div class="stat-card"><div class="stat-label">Inativos</div><div class="stat-val" style="color:var(--red)">${inat}</div></div>
+    <div class="stat-card"><div class="stat-label">👥 Internados</div><div class="stat-val" style="color:var(--blue)">${intern}</div><div class="stat-sub">Pacientes ativos</div></div>
+    <div class="stat-card"><div class="stat-label">🏠 Altas</div><div class="stat-val" style="color:var(--green)">${altas}</div><div class="stat-sub">Registradas no sistema</div></div>
+    <div class="stat-card"><div class="stat-label">👨‍⚕️ Funcionários</div><div class="stat-val" style="color:var(--yellow)">${funcs}</div><div class="stat-sub">Equipe ativa</div></div>
+    <div class="stat-card"><div class="stat-label">🚫 Inativos</div><div class="stat-val" style="color:var(--red)">${inat}</div><div class="stat-sub">Acessos bloqueados</div></div>
   </div>
   <div class="sg2">
     <div class="tcard"><div class="thead-row"><div class="ttitle">Pacientes — Internação</div></div>
@@ -604,21 +607,27 @@ function pPerfilPaciente(id) {
       </table>
     </div>
 
-    <!-- Histórico de Movimentações -->
+    <!-- Histórico de Movimentações (Timeline Médica) -->
     <div class="tcard">
-      <div class="thead-row"><div class="ttitle">Log de Auditoria / Movimentações</div></div>
-      <table>
-        <thead><tr><th>Data/Hora</th><th>Ação</th><th>Medicamento</th><th>Responsável</th><th>Observações</th></tr></thead>
-        <tbody>
-          ${hist.length ? hist.slice(0, 50).map(h => `<tr>
-            <td class="mono" style="font-size:10px">${h.criado_em}</td>
-            <td>${tipoHist(h.tipo)}</td>
-            <td>${h.medicamento}</td>
-            <td style="font-size:11px">${h.responsavel}</td>
-            <td style="font-size:11px;color:var(--text3)">${h.observacoes}</td>
-          </tr>`).join('') : `<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text3)">Nenhum evento registrado.</td></tr>`}
-        </tbody>
-      </table>
+      <div class="thead-row"><div class="ttitle">Linha do Tempo Médica / Auditoria</div></div>
+      <div style="padding: 20px;">
+        <div class="m-timeline">
+          ${hist.length ? hist.slice(0, 30).map(h => `
+            <div class="mt-item">
+              <div class="mt-dot" style="background:${tipoHistCor(h.tipo)}"></div>
+              <div class="mt-time">${h.criado_em}</div>
+              <div class="mt-content">
+                <div class="mt-title">${h.tipo}: ${h.medicamento || 'Evento Clínico'}</div>
+                <div class="mt-body">${h.observacoes || 'Nenhuma observação registrada.'}</div>
+                <div class="mt-meta">
+                  <span>👤 Responsável: ${h.responsavel}</span>
+                  ${h.leito ? `<span>🏥 Leito: ${h.leito}</span>` : ''}
+                </div>
+              </div>
+            </div>
+          `).join('') : '<div style="color:var(--text3);text-align:center;padding:20px;">Nenhum evento registrado nesta linha do tempo.</div>'}
+        </div>
+      </div>
     </div>
   `;
 }
@@ -633,10 +642,10 @@ function pMedDash(){
       <button class="btn btn-primary" onclick="om('m-rx')">+ Prescrição</button>
     </div></div>
   <div class="sg4">
-    <div class="stat-card"><div class="stat-label">Internados</div><div class="stat-val" style="color:var(--blue)">${intern}</div></div>
-    <div class="stat-card"><div class="stat-label">Prescrições Ativas</div><div class="stat-val" style="color:var(--yellow)">${atv}</div></div>
-    <div class="stat-card"><div class="stat-label">Aguard. Administração</div><div class="stat-val" style="color:var(--purple)">${disp}</div></div>
-    <div class="stat-card"><div class="stat-label">Total Prescrições</div><div class="stat-val" style="color:var(--blue)">${STATE.prescricoes.length}</div></div>
+    <div class="stat-card"><div class="stat-label">👤 Internados</div><div class="stat-val" style="color:var(--blue)">${intern}</div><div class="stat-sub">Sob seus cuidados</div></div>
+    <div class="stat-card"><div class="stat-label">📋 Prescr. Ativas</div><div class="stat-val" style="color:var(--yellow)">${atv}</div><div class="stat-sub">Aguardando farmácia</div></div>
+    <div class="stat-card"><div class="stat-label">💉 Aguard. Adm.</div><div class="stat-val" style="color:var(--purple)">${disp}</div><div class="stat-sub">Prontas para o técnico</div></div>
+    <div class="stat-card"><div class="stat-label">📊 Histórico</div><div class="stat-val" style="color:var(--blue)">${STATE.prescricoes.length}</div><div class="stat-sub">Total de registros</div></div>
   </div>
   <div class="tcard"><div class="thead-row"><div class="ttitle">Últimas Prescrições</div><button class="btn btn-outline btn-sm" onclick="showPanel('med-rx')">Ver todas</button></div>
   <table><thead><tr><th>Paciente</th><th>Medicamento</th><th>Via</th><th>Status</th></tr></thead>
@@ -1143,7 +1152,7 @@ function verRx(id){
   const p=STATE.prescricoes.find(x=>x.id===id);
   $('rxdet-body').innerHTML=`
     <div class="pac-hdr"><div class="pac-av">${p.pac_nome[0]}</div>
-    <div><div class="pac-name">${p.pac_nome}</div><div class="pac-info">Leito ${p.leito} · ${p.id}</div></div>
+    <div><div class="pac-name">${p.pac_name}</div><div class="pac-info">Leito ${p.leito} · ${p.id}</div></div>
     <div style="margin-left:auto">${sbadge(p.status)}</div></div>
     <div class="drow"><span class="dkey">Medicamento</span><span class="dval">${p.medicamento}</span></div>
     <div class="drow"><span class="dkey">Via</span><span class="dval">${p.via}</span></div>
@@ -1158,8 +1167,50 @@ function verRx(id){
       <div class="tl-item"><div class="tl-dot" style="background:var(--blue)"></div><div class="tl-txt"><strong>Prescrita</strong> — ${p.medico}<br><span class="tl-time">${p.criado_em}</span></div></div>
       ${p.status==='dispensada'||p.status==='administrada'?`<div class="tl-item"><div class="tl-dot" style="background:var(--green)"></div><div class="tl-txt"><strong>Dispensada</strong> — Farmácia</div></div>`:''}
       ${p.status==='administrada'?`<div class="tl-item"><div class="tl-dot" style="background:var(--purple)"></div><div class="tl-txt"><strong>Administrada</strong> — Enfermagem</div></div>`:''}
+    </div>
+    <div style="margin-top:20px;display:flex;justify-content:center">
+      <button class="btn btn-outline" onclick="imprimirPrescricaoPDF('${p.id}')">🖨️ Imprimir Receituário PDF</button>
     </div>`;
   om('m-rxdet');
+}
+
+async function imprimirPrescricaoPDF(id) {
+  const p = STATE.prescricoes.find(x => x.id === id);
+  if (!p) return;
+
+  try {
+    toast("Gerando PDF profissional...", "⏳", "info");
+    
+    // 1. Chamar comando Rust para gerar Base64
+    const b64 = await window.__TAURI__.core.invoke('cmd_gerar_prescricao_pdf', { 
+      data: {
+        paciente: p.pac_nome,
+        leito: p.leito,
+        medicamento: p.medicamento,
+        dose: p.dose,
+        via: p.via,
+        frequencia: p.frequencia,
+        medico: p.medico,
+        data: p.criado_em
+      }
+    });
+
+    // 2. Abrir diálogo de salvamento
+    const path = await window.__TAURI__.dialog.save({
+      defaultPath: `Prescricao_${p.pac_nome.replace(/ /g,'_')}.pdf`,
+      filters: [{ name: 'PDF', extensions: ['pdf'] }]
+    });
+
+    if (path) {
+      // 3. Salvar o arquivo via Rust (usando fs plugin)
+      const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+      await window.__TAURI__.fs.writeBinaryFile(path, bytes);
+      toast("PDF salvo com sucesso!", "✓", "ok");
+    }
+  } catch (e) {
+    console.error("ERRO AO GERAR PDF:", e);
+    toast("Erro ao gerar PDF: " + e, "⚠", "error");
+  }
 }
 
 // ── INIT ───────────────────────────────────
@@ -1187,7 +1238,7 @@ Object.assign(window, {
   showPanel, om, cm, salvarPac, salvarRx, salvarAlteracaoRx,
   confirmarAlta, confirmarDisp, confirmarAdm, salvarRelat,
   salvarFunc, gerarSenhaAuto, abrirPerfilPaciente, abrirAlta,
-  abrirDisp, abrirAdm, abrirRelat, verRelatsPac, verRx,
+  verRx, imprimirPrescricaoPDF,
   abrirAlterarRx, filtRx, toggleFunc, abrirPerfilFunc, confirmarAlterarSenhaManual,
   salvarNovaSenha
 });
