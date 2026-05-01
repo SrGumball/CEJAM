@@ -143,11 +143,36 @@ async function doLogin(){
       }
     }
   } catch(e){
+    console.error("FALHA NO LOGIN:", e);
     const b = $('btn-login');
     if(b) { b.disabled=false; b.innerText='Entrar'; }
-    toast(e.message, "!", "b-red");
+    
+    // Mostra erro técnico no caixote vermelho
+    const dBox = $('debug-box');
+    const dMsg = $('debug-msg');
+    if(dBox && dMsg) {
+      dBox.style.display = 'block';
+      dMsg.innerHTML = `<strong>Passo:</strong> Login<br><strong>Erro:</strong> ${e.message}<br><strong>Código:</strong> ${e.code || 'N/A'}<br><strong>Stack:</strong> ${e.stack || ''}`;
+    }
+
+    let msg = e.message;
+    if(e.code === 'auth/invalid-credential') msg = "E-mail ou senha incorretos.";
+    if(e.code === 'auth/network-request-failed') msg = "Erro de conexão com o servidor.";
+    
+    toast(msg, "!", "b-red");
   }
 }
+
+// Captura erros globais (ex: se o Firebase nem carregar)
+window.onerror = function(msg, url, lineNo, columnNo, error) {
+  const dBox = $('debug-box');
+  const dMsg = $('debug-msg');
+  if(dBox && dMsg) {
+    dBox.style.display = 'block';
+    dMsg.innerHTML += `<br><br><strong>GLOBAL ERROR:</strong><br>${msg}<br>em ${url}:${lineNo}`;
+  }
+  return false;
+};
 
 async function entrarNoSistema(){
   hide('sc-login');

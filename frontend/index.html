@@ -31,7 +31,17 @@
     <div class="ferr" id="login-err">E-mail ou senha incorretos.</div>
     <button class="btn-full" id="btn-login" onclick="doLogin()">Entrar</button>
     <div class="box-hint">Acesso restrito a funcionários cadastrados</div>
+    <div id="debug-version" style="font-size: 10px; color: var(--text3); margin-top: 20px; text-align: center; opacity: 0.5;">v1.0.4 — Build Stable</div>
   </div>
+</div>
+
+<!-- Janela de Erro Técnico (Plano de Diagnóstico) -->
+<div id="debug-box" style="display:none; position:fixed; bottom:0; left:0; right:0; background: #2a1111; color: #ff8888; padding: 15px; font-family: monospace; font-size: 11px; border-top: 2px solid #ff4444; z-index: 9999; max-height: 200px; overflow-y: auto;">
+  <div style="display:flex; justify-content: space-between; margin-bottom: 5px;">
+    <strong>DETALHES TÉCNICOS DO ERRO:</strong>
+    <button onclick="this.parentElement.parentElement.style.display='none'" style="background:none; border:none; color:white; cursor:pointer;">[FECHAR]</button>
+  </div>
+  <div id="debug-msg"></div>
 </div>
 
 <!-- ═══ TELA TROCA DE SENHA (PRIMEIRO ACESSO) ═══ -->
