@@ -159,9 +159,10 @@ async function doLogin(){
     console.log("7. Login concluído com sucesso.");
   } catch(e){
     console.error("LOG DE ERRO:", e);
-    $('login-err').textContent = e.message;
-    $('login-err').classList.add('show');
-    btn.disabled=false; btn.textContent='Entrar'; // Reset do botão em caso de erro
+    // Destrava o botão e mostra o erro
+    const b = $('btn-login');
+    if(b) { b.disabled=false; b.innerText='Entrar'; }
+    toast(e.message, "!", "b-red");
   }
 }
 
@@ -178,17 +179,14 @@ async function entrarNoSistema(){
     show('sc-main');
     // Carrega view inicial baseada no cargo
     const role = currentUser.cargo;
-    if(role === 'tecnico') {
-      showPanel('enf-adm');
-    } else if(role === 'enfermagem' || role === 'farmacia') {
-      showPanel('enf-adm');
-    } else if(role === 'medico') {
-      showPanel('med-pac');
-    } else if(role === 'admin') {
-      showPanel('adm-dash');
-    } else {
-      showPanel('enf-adm');
-    }
+    console.log("Roteando para cargo:", role);
+    
+    if(role === 'tecnico') showPanel('enf-adm');
+    else if(role === 'medico') showPanel('med-dash');
+    else if(role === 'admin') showPanel('adm-dash');
+    else if(role === 'enfermagem') showPanel('enf-painel');
+    else if(role === 'farmacia') showPanel('farm-disp');
+    else showPanel('adm-dash');
   }
 }
 
