@@ -17,6 +17,12 @@ if (!firebase.apps.length) {
 }
 
 const auth = firebase.auth();
+
+// Desativa a persistência nativa (que trava no protocolo tauri://)
+auth.setPersistence(firebase.auth.Auth.Persistence.NONE)
+  .then(() => console.log("🔥 Persistência definida como NONE (Compatibilidade Tauri)"))
+  .catch(err => console.error("Erro ao definir persistência:", err));
+
 const db = firebase.firestore();
 
 // Exportar para uso em outros módulos e no escopo global
