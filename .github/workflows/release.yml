@@ -42,15 +42,35 @@ jobs:
       - name: install frontend dependencies
         run: npm install
 
-      - name: create admin key from secret
+      - name: create admin key from secret (Linux)
+        if: runner.os == 'Linux'
         shell: bash
         run: |
-          if [ -z "${{ secrets.FIREBASE_ADMIN_KEY }}" ]; then
-            echo "AVISO: FIREBASE_ADMIN_KEY não configurada nos Secrets do GitHub."
+          if [ -z "$FIREBASE_KEY_B64" ]; then
+            echo "AVISO: FIREBASE_ADMIN_KEY_B64 nao configurada. Usando chave vazia."
             echo "{}" > chave-admin.json
           else
-            echo '${{ secrets.FIREBASE_ADMIN_KEY }}' > chave-admin.json
+            echo "$FIREBASE_KEY_B64" | base64 -d > chave-admin.json
+            echo "chave-admin.json criada com sucesso ($(wc -c < chave-admin.json) bytes)"
           fi
+        env:
+          FIREBASE_KEY_B64: ${{ secrets.FIREBASE_ADMIN_KEY_B64 }}
+
+      - name: create admin key from secret (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $keyB64 = "$env:FIREBASE_KEY_B64"
+          if ([string]::IsNullOrEmpty($keyB64)) {
+            Write-Host "AVISO: FIREBASE_ADMIN_KEY_B64 nao configurada. Usando chave vazia."
+            Set-Content -Path "chave-admin.json" -Value "{}"
+          } else {
+            $bytes = [System.Convert]::FromBase64String($keyB64)
+            [System.IO.File]::WriteAllBytes("chave-admin.json", $bytes)
+            Write-Host "chave-admin.json criada com sucesso"
+          }
+        env:
+          FIREBASE_KEY_B64: ${{ secrets.FIREBASE_ADMIN_KEY_B64 }}
 
       - uses: tauri-apps/tauri-action@v0
         env:

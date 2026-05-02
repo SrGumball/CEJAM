@@ -121,10 +121,16 @@ async function doLogin(){
   try {
     console.log("1. Iniciando Autenticação Nativa (Rust)...");
     
+    // Timeout de 15 segundos para todo o processo
+    const loginTimeout = setTimeout(() => {
+      throw new Error("Tempo limite de login excedido. Verifique sua conexão com a internet.");
+    }, 15000);
+
     // Chama o comando Rust para fazer o login por fora do navegador
     const res = await window.__TAURI__.core.invoke('cmd_login_nativo', { email, senha });
     
     if (!res.success) {
+      clearTimeout(loginTimeout);
       throw new Error(res.message);
     }
 
@@ -135,11 +141,20 @@ async function doLogin(){
     const customToken = await window.__TAURI__.core.invoke('cmd_obter_custom_token', { uid });
     
     console.log("4. Autenticando SDK Javascript...");
+    if (!fb || !fb.auth) throw new Error("Erro Crítico: SDK do Firebase não foi carregado corretamente.");
+    
     await fb.auth.signInWithCustomToken(customToken);
 
     console.log("5. Buscando Perfil no Banco...");
-    const userDoc = await fb.db.collection("funcionarios").doc(email).get();
+    // Firestore com timeout manual
+    const userDocPromise = fb.db.collection("funcionarios").doc(email).get();
+    const userDoc = await Promise.race([
+      userDocPromise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Erro ao consultar banco de dados (Timeout)")), 8000))
+    ]);
     
+    clearTimeout(loginTimeout);
+
     if (userDoc.exists) {
       currentUser = userDoc.data();
       currentUser.id = uid;
