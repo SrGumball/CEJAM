@@ -261,7 +261,7 @@ async fn cmd_gerar_prescricao_pdf(data: PrescriptionData) -> Result<String, Stri
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_localhost::Builder::new().build()) // INJETA SERVIDOR LOCALHTTP
+        .plugin(tauri_plugin_localhost::Builder::new(1420).build()) // INJETA SERVIDOR LOCALHTTP
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
