@@ -47,11 +47,11 @@ jobs:
         run: |
           if [ -z "${{ secrets.FIREBASE_ADMIN_KEY }}" ]; then
             echo "AVISO: FIREBASE_ADMIN_KEY não configurada nos Secrets do GitHub."
-            # Cria um arquivo vazio apenas para o build não falhar se for teste, 
-            # mas o app não funcionará corretamente sem a chave real.
             echo "{}" > chave-admin.json
           else
-            echo "${{ secrets.FIREBASE_ADMIN_KEY }}" > chave-admin.json
+            cat << 'EOF' > chave-admin.json
+${{ secrets.FIREBASE_ADMIN_KEY }}
+EOF
           fi
 
       - uses: tauri-apps/tauri-action@v0
