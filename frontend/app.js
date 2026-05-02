@@ -122,32 +122,26 @@ async function doLogin(){
   const timeout = (ms, msg) => new Promise((_, reject) => setTimeout(() => reject(new Error(msg)), ms));
 
   try {
-    console.log("1. Validando credenciais via Rust...");
-
-    // Passo 1: Valida email/senha via API REST do Firebase (Rust)
-    const res = await Promise.race([
-      window.__TAURI__.core.invoke('cmd_login_nativo', { email, senha }),
-      timeout(12000, "Tempo limite excedido ao conectar com o servidor.")
-    ]);
+    console.log("1. Autenticando com Firebase Auth...");
     
-    if (!res.success) throw new Error(res.message);
-    const uid = res.uid;
-    console.log("2. Credenciais OK. UID:", uid);
+    // Configura debug para ajudar
+    firebase.setLogLevel('debug');
 
-    // Passo 2: Gera Custom Token no Rust e autentica o SDK JS
-    console.log("3. Obtendo Custom Token...");
-    const customToken = await Promise.race([
-      window.__TAURI__.core.invoke('cmd_obter_custom_token', { uid }),
-      timeout(10000, "Tempo limite ao gerar token de acesso.")
-    ]);
-
-    console.log("4. Autenticando SDK Firebase...");
-    if (!fb || !fb.auth) throw new Error("SDK do Firebase não carregou corretamente.");
-
-    await Promise.race([
-      fb.auth.signInWithCustomToken(customToken),
-      timeout(12000, "Tempo limite ao autenticar na nuvem. Verifique sua conexão.")
-    ]);
+    // Autenticação padrão do Firebase
+    let userCred;
+    try {
+      userCred = await Promise.race([
+        fb.auth.signInWithEmailAndPassword(email, senha),
+        timeout(15000, "Tempo limite excedido ao autenticar. Verifique sua conexão.")
+      ]);
+    } catch (err) {
+      console.error("Erro Auth:", err.code || err);
+      if (err.message && err.message.includes("Tempo limite")) throw err;
+      throw new Error("E-mail ou senha incorretos.");
+    }
+    
+    const uid = userCred.user.uid;
+    console.log("2. Autenticado com sucesso. UID:", uid);
 
     // Passo 3: Busca perfil do usuário no Firestore
     console.log("5. Buscando perfil...");
