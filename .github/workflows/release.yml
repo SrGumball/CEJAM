@@ -49,9 +49,7 @@ jobs:
             echo "AVISO: FIREBASE_ADMIN_KEY não configurada nos Secrets do GitHub."
             echo "{}" > chave-admin.json
           else
-            cat << 'EOF' > chave-admin.json
-${{ secrets.FIREBASE_ADMIN_KEY }}
-EOF
+            echo '${{ secrets.FIREBASE_ADMIN_KEY }}' > chave-admin.json
           fi
 
       - uses: tauri-apps/tauri-action@v0
