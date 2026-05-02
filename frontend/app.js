@@ -118,50 +118,51 @@ async function doLogin(){
   btn.disabled=true; 
   btn.innerHTML='<div class="spinner spinner-sm"></div> Entrando...';
   
+  // Helper: timeout como Promise rejeitada
+  const timeout = (ms, msg) => new Promise((_, reject) => setTimeout(() => reject(new Error(msg)), ms));
+
   try {
-    console.log("1. Iniciando Autenticação Nativa (Rust)...");
-    
-    // Timeout de 15 segundos para todo o processo
-    const loginTimeout = setTimeout(() => {
-      throw new Error("Tempo limite de login excedido. Verifique sua conexão com a internet.");
-    }, 15000);
+    console.log("1. Validando credenciais via Rust...");
 
-    // Chama o comando Rust para fazer o login por fora do navegador
-    const res = await window.__TAURI__.core.invoke('cmd_login_nativo', { email, senha });
-    
-    if (!res.success) {
-      clearTimeout(loginTimeout);
-      throw new Error(res.message);
-    }
-
-    const uid = res.uid;
-    console.log("2. Login Nativo OK. UID:", uid);
-
-    console.log("3. Obtendo Token de Acesso (Bridge)...");
-    const customToken = await window.__TAURI__.core.invoke('cmd_obter_custom_token', { uid });
-    
-    console.log("4. Autenticando SDK Javascript...");
-    if (!fb || !fb.auth) throw new Error("Erro Crítico: SDK do Firebase não foi carregado corretamente.");
-    
-    await fb.auth.signInWithCustomToken(customToken);
-
-    console.log("5. Buscando Perfil no Banco...");
-    // Firestore com timeout manual
-    const userDocPromise = fb.db.collection("funcionarios").doc(email).get();
-    const userDoc = await Promise.race([
-      userDocPromise,
-      new Promise((_, reject) => setTimeout(() => reject(new Error("Erro ao consultar banco de dados (Timeout)")), 8000))
+    // Passo 1: Valida email/senha via API REST do Firebase (Rust)
+    const res = await Promise.race([
+      window.__TAURI__.core.invoke('cmd_login_nativo', { email, senha }),
+      timeout(12000, "Tempo limite excedido ao conectar com o servidor.")
     ]);
     
-    clearTimeout(loginTimeout);
+    if (!res.success) throw new Error(res.message);
+    const uid = res.uid;
+    console.log("2. Credenciais OK. UID:", uid);
 
+    // Passo 2: Gera Custom Token no Rust e autentica o SDK JS
+    console.log("3. Obtendo Custom Token...");
+    const customToken = await Promise.race([
+      window.__TAURI__.core.invoke('cmd_obter_custom_token', { uid }),
+      timeout(10000, "Tempo limite ao gerar token de acesso.")
+    ]);
+
+    console.log("4. Autenticando SDK Firebase...");
+    if (!fb || !fb.auth) throw new Error("SDK do Firebase não carregou corretamente.");
+
+    await Promise.race([
+      fb.auth.signInWithCustomToken(customToken),
+      timeout(12000, "Tempo limite ao autenticar na nuvem. Verifique sua conexão.")
+    ]);
+
+    // Passo 3: Busca perfil do usuário no Firestore
+    console.log("5. Buscando perfil...");
+    const userDoc = await Promise.race([
+      fb.db.collection("funcionarios").doc(email).get(),
+      timeout(8000, "Tempo limite ao consultar banco de dados.")
+    ]);
+    
     if (userDoc.exists) {
       currentUser = userDoc.data();
       currentUser.id = uid;
-      console.log("6. Login com sucesso para:", currentUser.nome);
+      console.log("6. Login concluído para:", currentUser.nome);
       await entrarNoSistema();
     } else {
-      // Caso especial: Criar admin se for o e-mail do dono
+      // Caso especial: cria perfil admin se for o email do dono
       if (email === "alefdias44@cejam.com") {
         currentUser = { id: uid, nome: "Alef Dias", email, cargo: "admin", ativo: true, primeiro_acesso: false };
         await fb.db.collection("funcionarios").doc(email).set({ ...currentUser, criado_em: fb.serverTimestamp() });
@@ -172,27 +173,28 @@ async function doLogin(){
     }
   } catch(e){
     console.error("FALHA NO LOGIN:", e);
-    const b = $('btn-login');
-    if(b) { b.disabled=false; b.innerText='Entrar'; }
     
-    // Normaliza o erro para pegar a mensagem
+    // Sempre reseta o botão
+    if(btn) { btn.disabled=false; btn.innerText='Entrar'; }
+    
     const errorMsg = typeof e === 'string' ? e : (e.message || "Erro desconhecido");
-    const errorCode = e.code || 'N/A';
-    const errorStack = e.stack || '';
+    const errorCode = e.code || '';
 
-    // Mostra erro técnico no caixote vermelho
+    // Mostra erro técnico no painel vermelho
     const dBox = $('debug-box');
     const dMsg = $('debug-msg');
     if(dBox && dMsg) {
       dBox.style.display = 'block';
-      dMsg.innerHTML = `<strong>Passo:</strong> Login<br><strong>Erro:</strong> ${errorMsg}<br><strong>Código:</strong> ${errorCode}<br><strong>Stack:</strong> ${errorStack}`;
+      dMsg.innerHTML = `<strong>Erro:</strong> ${errorMsg}<br><strong>Código:</strong> ${errorCode || 'N/A'}`;
     }
 
-    let userFriendlyMsg = errorMsg;
-    if(errorCode === 'auth/invalid-credential') userFriendlyMsg = "E-mail ou senha incorretos.";
-    if(errorCode === 'auth/network-request-failed') userFriendlyMsg = "Erro de conexão com o servidor.";
+    let userMsg = errorMsg;
+    if(errorCode === 'auth/invalid-credential' || errorCode === 'auth/wrong-password') userMsg = "E-mail ou senha incorretos.";
+    if(errorCode === 'auth/invalid-custom-token') userMsg = "Erro interno de autenticação. Contate o suporte.";
+    if(errorCode === 'auth/network-request-failed') userMsg = "Sem conexão com o servidor.";
+    if(errorMsg.includes('E-mail ou senha')) userMsg = "E-mail ou senha incorretos.";
     
-    toast(userFriendlyMsg, "!", "b-red");
+    toast(userMsg, "!", "b-red");
   }
 }
 
