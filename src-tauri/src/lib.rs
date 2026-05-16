@@ -31,6 +31,22 @@ pub struct PrescriptionData {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct PedidoData {
+    pub dias: String,
+    pub itens: Vec<PedidoItem>,
+    pub responsavel: String,
+    pub data: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PedidoItem {
+    pub medicamento: String,
+    pub doses_dia: String,
+    pub total: String,
+    pub pacientes_count: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CustomTokenClaims {
     pub iss: String,
     pub sub: String,
@@ -40,72 +56,7 @@ pub struct CustomTokenClaims {
     pub uid: String,
 }
 
-#[tauri::command]
-async fn cmd_admin_reset_password(email: String, nova_senha: String) -> Result<ResetResponse, String> {
-    // A chave agora é embutida diretamente no executável durante a compilação
-    let key_data = include_str!("../../chave-admin.json");
-    
-    // 1. Ler a chave do Service Account a partir da string embutida
-    if key_data.trim() == "{}" || key_data.trim().is_empty() {
-        return Err("A chave de administração não foi configurada nos Secrets do GitHub.".to_string());
-    }
 
-    let secret = yup_oauth2::parse_service_account_key(key_data)
-        .map_err(|e| format!("Erro no formato da chave admin: {}. Verifique os Secrets do GitHub.", e))?;
-
-    // 2. Criar autenticador para o Google Auth
-    let auth = ServiceAccountAuthenticator::builder(secret)
-        .build()
-        .await
-        .map_err(|e| format!("Falha ao iniciar autenticador: {}", e))?;
-
-    // 3. Obter token com escopo do Identity Toolkit (Firebase Auth)
-    let scopes = &["https://www.googleapis.com/auth/identitytoolkit"];
-    let token = auth.token(scopes)
-        .await
-        .map_err(|e| format!("Falha ao obter token do Google: {}", e))?;
-
-    // 4. Chamar a API do Firebase para obter o UID do usuário pelo e-mail
-    let client = Client::new();
-    let lookup_url = "https://identitytoolkit.googleapis.com/v1/accounts:lookup";
-    let lookup_body = serde_json::json!({ "email": vec![email.clone()] });
-
-    let lookup_res = client.post(lookup_url)
-        .bearer_auth(token.token().unwrap_or(""))
-        .json(&lookup_body)
-        .send()
-        .await
-        .map_err(|e| format!("Erro ao buscar usuário: {}", e))?;
-
-    let lookup_data: serde_json::Value = lookup_res.json().await.unwrap_or_default();
-    let local_id = lookup_data["users"][0]["localId"].as_str()
-        .ok_or_else(|| format!("Usuário {} não encontrado no sistema de autenticação.", email))?;
-
-    // 5. Agora sim, atualizar a senha usando o local_id (UID)
-    let update_url = "https://identitytoolkit.googleapis.com/v1/accounts:update";
-    let update_body = serde_json::json!({
-        "localId": local_id,
-        "password": nova_senha,
-        "returnSecureToken": true
-    });
-
-    let res = client.post(update_url)
-        .bearer_auth(token.token().unwrap_or(""))
-        .json(&update_body)
-        .send()
-        .await
-        .map_err(|e| format!("Erro na requisição de atualização: {}", e))?;
-
-    if res.status().is_success() {
-        Ok(ResetResponse {
-            success: true,
-            message: format!("Senha de {} alterada com sucesso!", email),
-        })
-    } else {
-        let err_body: serde_json::Value = res.json().await.unwrap_or_default();
-        Err(format!("Erro no Firebase: {}", err_body["error"]["message"]))
-    }
-}
 
 #[tauri::command]
 async fn cmd_login_nativo(email: String, senha: String) -> Result<LoginResponse, String> {
@@ -148,56 +99,16 @@ async fn cmd_login_nativo(email: String, senha: String) -> Result<LoginResponse,
             message: user_msg.to_string(),
             uid: None,
             id_token: None,
-        })
-    }
-}
-
-#[tauri::command]
-async fn cmd_obter_custom_token(uid: String) -> Result<String, String> {
-    let key_data = include_str!("../../chave-admin.json");
-    
-    // Verifica se a chave é apenas um JSON vazio (o que acontece se o Secret não estiver no GitHub)
-    if key_data.trim() == "{}" || key_data.trim().is_empty() {
-        return Err("A chave de administração (FIREBASE_ADMIN_KEY) não foi configurada nos Secrets do GitHub. O build não terá acesso total.".to_string());
-    }
-
-    let key_val: serde_json::Value = serde_json::from_str(key_data)
-        .map_err(|e| format!("Erro no formato do arquivo chave-admin.json: {}. Verifique se colou o JSON completo no GitHub.", e))?;
-    
-    let client_email = key_val["client_email"].as_str().ok_or("Campo 'client_email' não encontrado na chave admin.")?;
-    let private_key = key_val["private_key"].as_str().ok_or("Campo 'private_key' não encontrado na chave admin.")?;
-
-    let iat = chrono::Utc::now().timestamp() as u64;
-    let exp = iat + 3600; // 1 hora de validade
-
-    let claims = CustomTokenClaims {
-        iss: client_email.to_string(),
-        sub: client_email.to_string(),
-        aud: "https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit".to_string(),
-        iat,
-        exp,
-        uid,
-    };
-
-    let mut header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::RS256);
-    header.kid = key_val["private_key_id"].as_str().map(|s| s.to_string());
-
-    let token = jsonwebtoken::encode(
-        &header,
-        &claims,
-        &jsonwebtoken::EncodingKey::from_rsa_pem(private_key.as_bytes()).map_err(|e| e.to_string())?,
-    ).map_err(|e| e.to_string())?;
+_string())?;
 
     Ok(token)
 }
 
 #[tauri::command]
 async fn cmd_gerar_prescricao_pdf(data: PrescriptionData) -> Result<String, String> {
-    // 1. Carregar Fonte (DejaVuSans é padrão no Linux)
     let font_family = genpdf::fonts::from_files("/usr/share/fonts/truetype/dejavu", "DejaVuSans", None)
         .map_err(|e| format!("Erro ao carregar fonte: {}", e))?;
 
-    // 2. Criar Documento
     let mut doc = genpdf::Document::new(font_family);
     doc.set_title(format!("Prescrição - {}", data.paciente));
     
@@ -205,20 +116,17 @@ async fn cmd_gerar_prescricao_pdf(data: PrescriptionData) -> Result<String, Stri
     decorator.set_margins(10);
     doc.set_page_decorator(decorator);
 
-    // 3. Cabeçalho
     doc.push(genpdf::elements::Paragraph::new("CEJAM — SISTEMA HOSPITALAR")
         .styled(genpdf::style::Style::new().bold().with_font_size(18)));
     doc.push(genpdf::elements::Paragraph::new("RELATÓRIO DE PRESCRIÇÃO MÉDICA")
         .styled(genpdf::style::Style::new().with_font_size(12)));
     doc.push(genpdf::elements::Break::new(1.0));
 
-    // 4. Dados do Paciente
     doc.push(genpdf::elements::Paragraph::new(format!("Paciente: {}", data.paciente)).styled(genpdf::style::Style::new().bold()));
     doc.push(genpdf::elements::Paragraph::new(format!("Leito: {}", data.leito)));
     doc.push(genpdf::elements::Paragraph::new(format!("Data: {}", data.data)));
     doc.push(genpdf::elements::Break::new(1.0));
 
-    // 5. Detalhes da Medicação
     doc.push(genpdf::elements::Paragraph::new("MEDICAMENTOS PRESCRITOS:")
         .styled(genpdf::style::Style::new().bold().with_font_size(10)));
     
@@ -242,7 +150,6 @@ async fn cmd_gerar_prescricao_pdf(data: PrescriptionData) -> Result<String, Stri
     doc.push(table);
     doc.push(genpdf::elements::Break::new(2.0));
 
-    // 6. Rodapé / Assinatura
     doc.push(genpdf::elements::Paragraph::new("________________________________________________")
         .aligned(Alignment::Center));
     doc.push(genpdf::elements::Paragraph::new(format!("Dr(a). {}", data.medico))
@@ -251,7 +158,59 @@ async fn cmd_gerar_prescricao_pdf(data: PrescriptionData) -> Result<String, Stri
         .aligned(Alignment::Center)
         .styled(genpdf::style::Style::new().with_font_size(8)));
 
-    // 7. Gerar Buffer e retornar Base64
+    let mut buffer = Vec::new();
+    doc.render(&mut buffer).map_err(|e| format!("Erro ao renderizar PDF: {}", e))?;
+    
+    Ok(general_purpose::STANDARD.encode(buffer))
+}
+
+#[tauri::command]
+async fn cmd_gerar_pedido_pdf(data: PedidoData) -> Result<String, String> {
+    let font_family = genpdf::fonts::from_files("/usr/share/fonts/truetype/dejavu", "DejaVuSans", None)
+        .map_err(|e| format!("Erro ao carregar fonte: {}", e))?;
+
+    let mut doc = genpdf::Document::new(font_family);
+    doc.set_title("Pedido de Medicamentos");
+    
+    let mut decorator = genpdf::SimplePageDecorator::new();
+    decorator.set_margins(10);
+    doc.set_page_decorator(decorator);
+
+    doc.push(genpdf::elements::Paragraph::new("CEJAM — SISTEMA HOSPITALAR")
+        .styled(genpdf::style::Style::new().bold().with_font_size(18)));
+    doc.push(genpdf::elements::Paragraph::new("PROJEÇÃO PARA PEDIDO DE COMPRA")
+        .styled(genpdf::style::Style::new().with_font_size(12)));
+    doc.push(genpdf::elements::Paragraph::new(format!("Período de Projeção: {} dias", data.dias)));
+    doc.push(genpdf::elements::Paragraph::new(format!("Data do Relatório: {}", data.data)));
+    doc.push(genpdf::elements::Break::new(1.0));
+
+    let mut table = genpdf::elements::TableLayout::new(vec![3, 1, 1, 1]);
+    table.set_cell_decorator(genpdf::elements::FrameCellDecorator::new(true, true, false));
+    
+    table.row()
+        .element(genpdf::elements::Paragraph::new("Medicamento").styled(genpdf::style::Style::new().bold()))
+        .element(genpdf::elements::Paragraph::new("Doses/Dia").styled(genpdf::style::Style::new().bold()))
+        .element(genpdf::elements::Paragraph::new("Qtd Total").styled(genpdf::style::Style::new().bold()))
+        .element(genpdf::elements::Paragraph::new("Pacientes").styled(genpdf::style::Style::new().bold()))
+        .push();
+
+    for item in data.itens {
+        table.row()
+            .element(genpdf::elements::Paragraph::new(&item.medicamento))
+            .element(genpdf::elements::Paragraph::new(&item.doses_dia))
+            .element(genpdf::elements::Paragraph::new(&item.total))
+            .element(genpdf::elements::Paragraph::new(&item.pacientes_count))
+            .push();
+    }
+
+    doc.push(table);
+    doc.push(genpdf::elements::Break::new(2.0));
+
+    doc.push(genpdf::elements::Paragraph::new("________________________________________________")
+        .aligned(Alignment::Center));
+    doc.push(genpdf::elements::Paragraph::new(format!("Responsável: {}", data.responsavel))
+        .aligned(Alignment::Center));
+
     let mut buffer = Vec::new();
     doc.render(&mut buffer).map_err(|e| format!("Erro ao renderizar PDF: {}", e))?;
     
@@ -265,10 +224,9 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
-            cmd_admin_reset_password,
             cmd_login_nativo,
             cmd_gerar_prescricao_pdf,
-            cmd_obter_custom_token
+            cmd_gerar_pedido_pdf
         ])
         .run(tauri::generate_context!())
         .expect("Erro ao iniciar aplicação CEJAM");

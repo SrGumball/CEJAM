@@ -77,15 +77,25 @@
         <div class="sb-uname" id="sb-name"></div>
         <div class="sb-urole" id="sb-role"></div>
       </div>
-      <button class="sb-logout" onclick="doLogout()" title="Sair">⏻</button>
+      <div style="display:flex; gap:8px">
+        <button id="btn-trocar-ala-top" class="sb-action-btn" onclick="showPanel('trocar-ala')" title="Trocar Ala" style="display:none; background:rgba(52, 152, 219, 0.1); color:#3498db; border:none; width:32px; height:32px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px">🔄</button>
+        <button class="sb-logout" onclick="doLogout()" title="Sair">⏻</button>
+      </div>
     </div>
     <nav id="sb-nav"></nav>
-    <div class="sb-footer" id="sb-clock">● Online</div>
+    <div class="sb-footer">
+      <span id="sb-clock">● Online</span>
+      <button class="sb-settings-btn" onclick="om('m-settings')" title="Configurações de aparência">⚙️</button>
+    </div>
   </aside>
   <main class="main">
     <div class="topbar">
       <div class="topbar-title" id="topbar-title">Dashboard</div>
+      <div style="flex:1"></div>
       <input class="topbar-search" placeholder="🔍 Buscar paciente..." id="search-input" oninput="handleSearch()" />
+      <div id="notif-bell" onclick="om('m-notificacoes')" style="cursor:pointer; position:relative; margin:0 15px; font-size:22px;">
+        🔔<span id="notif-count" style="display:none; position:absolute; top:-5px; right:-5px; background:red; color:white; font-size:10px; padding:2px 6px; border-radius:10px; font-weight:bold; border:2px solid white">0</span>
+      </div>
       <button class="btn btn-primary" id="btn-top" onclick="handleTopBtn()">+ Novo</button>
     </div>
     <div class="content" id="content">
@@ -105,9 +115,10 @@
     <div class="modal-head"><div class="modal-title">👤 Admitir Paciente</div><button class="modal-close" onclick="cm('m-pac')">✕</button></div>
     <div class="modal-body">
       <div class="fg">
+        <div class="fgrp ff"><label class="flabel">Nº Prontuário</label><input class="fi" id="p-prontuario" placeholder="Ex: 12345"/></div>
         <div class="fgrp ff"><label class="flabel">Nome Completo</label><input class="fi" id="p-nome" placeholder="Nome do paciente"/></div>
-        <div class="fgrp"><label class="flabel">Data de Nascimento</label><input class="fi" type="date" id="p-nasc"/></div>
-        <div class="fgrp"><label class="flabel">Leito</label><input class="fi" id="p-leito" placeholder="Ex: A-04"/></div>
+        <div class="fgrp"><label class="flabel">Data de Nascimento</label><input class="fi" id="p-nasc" placeholder="dd/mm/aaaa"/></div>
+        <div class="fgrp"><label class="flabel">Ala</label><select class="fs" id="p-ala"></select></div>
         <div class="fgrp ff"><label class="flabel">Diagnóstico Principal</label>
           <select class="fs" id="p-diag">
             <option>Dependência de Álcool (CID F10)</option><option>Dependência de Cocaína (CID F14)</option>
@@ -143,7 +154,14 @@
         </div>
         <div class="fgrp"><label class="flabel">Dose</label><input class="fi" id="rx-dose" placeholder="Ex: 10mg"/></div>
         <div class="fgrp"><label class="flabel">Frequência</label>
-          <select class="fs" id="rx-freq"><option>1x ao dia (24/24h)</option><option>2x ao dia (12/12h)</option><option>3x ao dia (8/8h)</option><option>4x ao dia (6/6h)</option><option>Se necessário (SN)</option></select>
+          <select class="fs" id="rx-freq">
+            <option>1x ao dia (24/24h)</option>
+            <option>2x ao dia (08h - 20h)</option>
+            <option>3x ao dia (14h - 22h - 06h) - Contínuo</option>
+            <option>4x ao dia (00h - 06h - 12h - 18h)</option>
+            <option>Se necessário (SN)</option>
+            <option>Dose Única (AGORA)</option>
+          </select>
         </div>
         <div class="fgrp"><label class="flabel">Duração</label><input class="fi" id="rx-dur" placeholder="Ex: 7 dias"/></div>
         <div class="fgrp ff"><label class="flabel">Observações</label><textarea class="ft" id="rx-obs" placeholder="Cuidados, interações..."></textarea></div>
@@ -165,9 +183,9 @@
         <div class="fgrp"><label class="flabel">Nova Frequência</label>
           <select class="fs" id="rxe-freq">
             <option>1x ao dia (24/24h)</option>
-            <option>2x ao dia (12/12h)</option>
-            <option>3x ao dia (8/8h)</option>
-            <option>4x ao dia (6/6h)</option>
+            <option>2x ao dia (08h - 20h)</option>
+            <option>3x ao dia (14h - 22h - 06h) - Contínuo</option>
+            <option>4x ao dia (00h - 06h - 12h - 18h)</option>
             <option>Se necessário (SN)</option>
           </select>
         </div>
@@ -192,10 +210,16 @@
         <select class="fs" id="alta-tipo"><option>Alta Hospitalar — Melhora clínica</option><option>Alta a pedido do paciente</option><option>Alta para tratamento ambulatorial</option><option>Transferência</option></select>
       </div>
       <div class="fgrp" style="margin-top:12px"><label class="flabel">Resumo / Orientações</label><textarea class="ft" id="alta-resumo" placeholder="Medicamentos de uso domiciliar, retorno..."></textarea></div>
+      <div class="fgrp" style="margin-top:12px">
+        <label class="flabel">Dias de Medicação para Levar (Alta Domiciliar)</label>
+        <input class="fi" type="number" id="alta-dias-med" value="3" min="0" max="30" oninput="atualizarResumoAltaMed()"/>
+      </div>
+      <div id="alta-med-resumo" style="margin-top:10px"></div>
     </div>
     <div class="modal-foot"><button class="btn btn-outline" onclick="cm('m-alta')">Cancelar</button><button class="btn btn-red" onclick="confirmarAlta()">✓ Confirmar Alta</button></div>
   </div>
 </div>
+
 
 <!-- Dispensar -->
 <div class="modal-overlay" id="m-disp">
@@ -215,6 +239,28 @@
   </div>
 </div>
 
+<!-- Sinais Vitais (Novo) -->
+<div class="modal-overlay" id="m-sv">
+  <div class="modal modal-sm">
+    <div class="modal-head"><div class="modal-title">❤️ Aferir Sinais Vitais</div><button class="modal-close" onclick="cm('m-sv')">✕</button></div>
+    <div class="modal-body">
+      <div class="alert a-info">Confirmar identificação do paciente.</div>
+      <div class="drow"><span class="dkey">Paciente</span><span class="dval" id="sv-pac-nome"></span></div>
+      <div class="drow"><span class="dkey">Ala</span><span class="dval mono" id="sv-ala"></span></div>
+      <div style="margin-top:12px">
+        <div class="fg">
+          <div class="fgrp"><label class="flabel">PA (mmHg)</label><input class="fi" id="sv-pa" placeholder="120/80"/></div>
+          <div class="fgrp"><label class="flabel">FC (bpm)</label><input class="fi" id="sv-fc" placeholder="80"/></div>
+          <div class="fgrp"><label class="flabel">Temp. (°C)</label><input class="fi" id="sv-temp" placeholder="36.5"/></div>
+          <div class="fgrp"><label class="flabel">SpO2 (%)</label><input class="fi" id="sv-spo2" placeholder="98"/></div>
+          <div class="fgrp ff"><label class="flabel">Observações</label><input class="fi" id="sv-obs" placeholder="Nenhuma..."/></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-outline" onclick="cm('m-sv')">Cancelar</button><button class="btn btn-primary" onclick="salvarSV()">✓ Salvar</button></div>
+  </div>
+</div>
+
 <!-- Relatório de Enfermagem -->
 <div class="modal-overlay" id="m-relat">
   <div class="modal">
@@ -223,7 +269,7 @@
       <div class="fg">
         <div class="fgrp"><label class="flabel">Paciente</label><select class="fs" id="r-pac"></select></div>
         <div class="fgrp"><label class="flabel">Turno</label>
-          <select class="fs" id="r-turno"><option>Manhã (07h–15h)</option><option>Tarde (15h–23h)</option><option>Noite (23h–07h)</option></select>
+          <select class="fs" id="r-turno"><option>Manhã (07h–19h)</option><option>Noite (19h–07h)</option></select>
         </div>
         <div class="fgrp"><label class="flabel">PA (mmHg)</label><input class="fi" id="r-pa" placeholder="120/80"/></div>
         <div class="fgrp"><label class="flabel">FC (bpm)</label><input class="fi" id="r-fc" placeholder="80"/></div>
@@ -239,6 +285,7 @@
     <div class="modal-foot"><button class="btn btn-outline" onclick="cm('m-relat')">Cancelar</button><button class="btn btn-primary" onclick="salvarRelat()">✓ Salvar</button></div>
   </div>
 </div>
+
 
 <!-- Cadastrar Funcionário -->
 <div class="modal-overlay" id="m-func">
@@ -256,7 +303,7 @@
             <option value="tecnico">Técnico de Enfermagem</option>
           </select>
         </div>
-        <div class="fgrp"><label class="flabel">Data de Nascimento</label><input class="fi" id="f-nasc" type="date" oninput="gerarSenhaAuto()"/></div>
+        <div class="fgrp"><label class="flabel">Data de Nascimento</label><input class="fi" id="f-nasc" placeholder="dd/mm/aaaa" oninput="gerarSenhaAuto()"/></div>
         <div class="fgrp ff"><label class="flabel">Registro Profissional</label><input class="fi" id="f-reg" placeholder="CRM / CRF / COREN"/></div>
       </div>
       <div style="margin-top:14px">
@@ -266,6 +313,20 @@
       </div>
     </div>
     <div class="modal-foot"><button class="btn btn-outline" onclick="cm('m-func')">Cancelar</button><button class="btn btn-primary" onclick="salvarFunc()">✓ Cadastrar</button></div>
+  </div>
+</div>
+
+<!-- Cadastrar Ala -->
+<div class="modal-overlay" id="m-nova-ala">
+  <div class="modal modal-sm">
+    <div class="modal-head"><div class="modal-title">🏥 Cadastrar Nova Ala</div><button class="modal-close" onclick="cm('m-nova-ala')">✕</button></div>
+    <div class="modal-body">
+      <div class="fg">
+        <div class="fgrp ff"><label class="flabel">Nome da Ala</label><input class="fi" id="a-nome" placeholder="Ex: R4"/></div>
+        <div class="fgrp ff"><label class="flabel">Descrição (opcional)</label><input class="fi" id="a-desc" placeholder="Ex: Internação Pediátrica"/></div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-outline" onclick="cm('m-nova-ala')">Cancelar</button><button class="btn btn-primary" onclick="salvarAla()">✓ Cadastrar</button></div>
   </div>
 </div>
 
@@ -314,6 +375,116 @@
       <div class="fgrp" style="margin:0"><label class="flabel">Nova Senha Solicitada</label><input class="fi" id="f-nova-senha" type="text" placeholder="Digite a nova senha aqui"/></div>
       <button class="btn btn-green" onclick="confirmarAlterarSenhaManual()">✓ Alterar Senha Agora</button>
       <button class="btn btn-primary" onclick="cm('m-func-det')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL CONFIGURAÇÕES ═══ -->
+<div class="modal-overlay" id="m-settings">
+  <div class="modal modal-sm">
+    <div class="modal-head"><div class="modal-title">⚙️ Aparência</div><button class="modal-close" onclick="cm('m-settings')">✕</button></div>
+    <div class="modal-body">
+      <div style="margin-bottom:20px">
+        <label class="flabel" style="margin-bottom:12px;display:block">Paleta de Cores</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" id="theme-grid">
+
+          <div class="theme-card" onclick="applyTheme('verde')" id="t-verde">
+            <div class="theme-preview">
+              <div style="background:#4e9a5c;width:40px;height:100%;border-radius:6px 0 0 6px"></div>
+              <div style="flex:1;background:#f5faf5;border-radius:0 6px 6px 0;padding:6px">
+                <div style="background:#4e9a5c;height:6px;border-radius:3px;width:70%;margin-bottom:4px"></div>
+                <div style="background:#c8e6cb;height:4px;border-radius:3px;width:50%"></div>
+              </div>
+            </div>
+            <div class="theme-name">🌿 Verde Suave</div>
+          </div>
+
+          <div class="theme-card" onclick="applyTheme('azul')" id="t-azul">
+            <div class="theme-preview">
+              <div style="background:#1976d2;width:40px;height:100%;border-radius:6px 0 0 6px"></div>
+              <div style="flex:1;background:#f3f8ff;border-radius:0 6px 6px 0;padding:6px">
+                <div style="background:#1976d2;height:6px;border-radius:3px;width:70%;margin-bottom:4px"></div>
+                <div style="background:#bbdefb;height:4px;border-radius:3px;width:50%"></div>
+              </div>
+            </div>
+            <div class="theme-name">🌊 Azul Oceano</div>
+          </div>
+
+          <div class="theme-card" onclick="applyTheme('roxo')" id="t-roxo">
+            <div class="theme-preview">
+              <div style="background:#7b39c4;width:40px;height:100%;border-radius:6px 0 0 6px"></div>
+              <div style="flex:1;background:#faf5ff;border-radius:0 6px 6px 0;padding:6px">
+                <div style="background:#7b39c4;height:6px;border-radius:3px;width:70%;margin-bottom:4px"></div>
+                <div style="background:#e1d5f7;height:4px;border-radius:3px;width:50%"></div>
+              </div>
+            </div>
+            <div class="theme-name">💜 Roxo Elegante</div>
+          </div>
+
+          <div class="theme-card" onclick="applyTheme('ardosia')" id="t-ardosia">
+            <div class="theme-preview">
+              <div style="background:#455a64;width:40px;height:100%;border-radius:6px 0 0 6px"></div>
+              <div style="flex:1;background:#f5f7f8;border-radius:0 6px 6px 0;padding:6px">
+                <div style="background:#455a64;height:6px;border-radius:3px;width:70%;margin-bottom:4px"></div>
+                <div style="background:#cfd8dc;height:4px;border-radius:3px;width:50%"></div>
+              </div>
+            </div>
+            <div class="theme-name">🪨 Ardósia</div>
+          </div>
+
+          <div class="theme-card" onclick="applyTheme('rosa')" id="t-rosa">
+            <div class="theme-preview">
+              <div style="background:#c2185b;width:40px;height:100%;border-radius:6px 0 0 6px"></div>
+              <div style="flex:1;background:#fff5f8;border-radius:0 6px 6px 0;padding:6px">
+                <div style="background:#c2185b;height:6px;border-radius:3px;width:70%;margin-bottom:4px"></div>
+                <div style="background:#f8bbd0;height:4px;border-radius:3px;width:50%"></div>
+              </div>
+            </div>
+            <div class="theme-name">🌸 Rosa</div>
+          </div>
+
+          <div class="theme-card" onclick="applyTheme('escuro')" id="t-escuro">
+            <div class="theme-preview">
+              <div style="background:#1e2736;width:40px;height:100%;border-radius:6px 0 0 6px"></div>
+              <div style="flex:1;background:#141c27;border-radius:0 6px 6px 0;padding:6px">
+                <div style="background:#388bfd;height:6px;border-radius:3px;width:70%;margin-bottom:4px"></div>
+                <div style="background:#2a3a4a;height:4px;border-radius:3px;width:50%"></div>
+              </div>
+            </div>
+            <div class="theme-name">🌑 Dark Mode</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-outline" onclick="cm('m-settings')">Fechar</button></div>
+  </div>
+</div>
+
+<!-- Notificações -->
+<div class="modal-overlay" id="m-notificacoes">
+  <div class="modal modal-sm" style="position:fixed; top:65px; right:20px; margin:0; width:320px; border-radius:12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3)">
+    <div class="modal-head"><div class="modal-title">🔔 Notificações</div><button class="modal-close" onclick="cm('m-notificacoes')">✕</button></div>
+    <div class="modal-body" id="notif-body" style="padding:0; max-height:400px; overflow-y:auto; background:var(--surface2)">
+      <div style="padding:40px 20px; text-align:center; color:var(--text3)">Nenhuma notificação nova</div>
+    </div>
+    <div class="modal-foot" style="justify-content:center; padding:10px"><button class="btn btn-outline btn-sm" onclick="limparNotificacoes()">Limpar Tudo</button></div>
+  </div>
+</div>
+
+<!-- Selecionar Ala -->
+<div class="modal-overlay" id="m-selecionar-ala">
+  <div class="modal modal-sm">
+    <div class="modal-head"><div class="modal-title">🏥 Selecionar Ala de Trabalho</div></div>
+    <div class="modal-body">
+      <div class="alert a-info">Selecione a ala onde você irá atuar neste plantão. Isso filtrará sua lista de pacientes.</div>
+      <div class="fgrp">
+        <label class="flabel">Ala de Atuação</label>
+        <select class="fs" id="sel-ala-trabalho"></select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-primary btn-block" onclick="confirmarAlaTrabalho()">Confirmar e Entrar</button>
     </div>
   </div>
 </div>

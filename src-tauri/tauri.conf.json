@@ -10,7 +10,7 @@
     "windows": [
       {
         "title": "CEJAM — Sistema Hospitalar",
-        "url": "http://localhost:1420",
+        "url": "http://localhost:1420/index.html",
         "width": 1280,
         "height": 800,
         "minWidth": 900,
