@@ -3,6 +3,7 @@
 // ═══════════════════════════════════════════
 import { fb } from './firebase-config.js';
 let currentUser = null;
+let unsubscribers = [];
 let STATE = { pacientes: [], prescricoes: [], relatorios: [], historico: [], funcionarios: [], alas: [], notificacoes: [] };
 let _altaId = null, _dispId = null, _admId = null;
 let _pendingEmail = null;
@@ -240,72 +241,35 @@ async function doLogin(){
   errBox.classList.remove('show');
   btn.disabled=true; 
   btn.innerHTML='<div class="spinner spinner-sm"></div> Entrando...';
-  
-  // Helper: timeout como Promise rejeitada
-  const timeout = (ms, msg) => new Promise((_, reject) => setTimeout(() => reject(new Error(msg)), ms));
 
   try {
-    console.log("1. Autenticando com Firebase Auth...");
-    
-    // Configura debug para ajudar
-    firebase.setLogLevel('debug');
-
-    // Autenticação padrão do Firebase
-    let userCred;
-    try {
-      userCred = await Promise.race([
-        fb.auth.signInWithEmailAndPassword(email, senha),
-        timeout(15000, "Tempo limite excedido ao autenticar. Verifique sua conexão.")
-      ]);
-    } catch (err) {
-      console.error("Erro Auth:", err.code || err);
-      if (err.message && err.message.includes("Tempo limite")) throw err;
-      throw new Error("E-mail ou senha incorretos.");
-    }
-    
-    const uid = userCred.user.uid;
-    console.log("2. Autenticado com sucesso. UID:", uid);
-
-    // Passo 3: Busca perfil do usuário no Firestore
-    console.log("5. Buscando perfil...");
-    const userDoc = await Promise.race([
-      fb.db.collection("funcionarios").doc(email).get(),
-      timeout(8000, "Tempo limite ao consultar banco de dados.")
-    ]);
-    
-    if (userDoc.exists) {
-      currentUser = userDoc.data();
-      currentUser.id = uid;
-      console.log("6. Login concluído para:", currentUser.nome);
-      await entrarNoSistema();
-    } else {
-      // Caso especial: cria perfil admin se for o email do dono
-      if (email === "alefdias44@cejam.com") {
-        currentUser = { id: uid, nome: "Alef Dias", email, cargo: "admin", ativo: true, primeiro_acesso: false };
-        await fb.db.collection("funcionarios").doc(email).set({ ...currentUser, criado_em: fb.serverTimestamp() });
-        await entrarNoSistema();
-      } else {
-        throw new Error("Perfil não encontrado no sistema.");
-      }
-    }
+    console.log("1. Iniciando login...");
+    await fb.auth.signInWithEmailAndPassword(email, senha);
+    // O fluxo continuará no onAuthStateChanged para evitar duplicidade
   } catch(e){
     console.error("FALHA NO LOGIN:", e);
+    const errorMsg = (e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') 
+      ? "E-mail ou senha incorretos." 
+      : "Falha ao entrar. Verifique sua conexão.";
+    
+    errBox.innerHTML = errorMsg;
+    errBox.classList.add('show');
+    toast(errorMsg, "!", "error");
+    
     const dBox = $('debug-box');
     const dMsg = $('debug-msg');
-    const errorMsg = e.message || "Erro desconhecido";
-    const errorCode = e.code || '';
-
     if(dBox && dMsg) {
       dBox.style.display = 'block';
-      dMsg.innerHTML = `<strong>Erro:</strong> ${errorMsg}<br><strong>Código:</strong> ${errorCode || 'N/A'}`;
+      dMsg.innerHTML = `<strong>Erro:</strong> ${e.message}<br><strong>Código:</strong> ${e.code}`;
     }
-
-    let userMsg = errorMsg;
-    if(errorCode === 'auth/invalid-credential' || errorCode === 'auth/wrong-password') userMsg = "E-mail ou senha incorretos.";
-    if(errorCode === 'auth/network-request-failed') userMsg = "Sem conexão com o servidor.";
-    
-    toast(userMsg, "!", "error");
-    if(btn) { btn.disabled = false; btn.innerHTML = 'Entrar'; }
+  } finally {
+    // Se ainda estivermos na tela de login após 2 segundos (falha ou demora), libera o botão
+    setTimeout(() => {
+       if($('sc-login').style.display !== 'none') {
+         btn.disabled = false; 
+         btn.innerHTML = 'Entrar';
+       }
+    }, 2000);
   }
 }
 
@@ -397,10 +361,22 @@ async function salvarNovaSenha(){
 }
 
 function doLogout(){
+  console.log("Encerrando sessão...");
+  // Limpa todos os listeners ativos para evitar travamentos
+  unsubscribers.forEach(unsub => unsub());
+  unsubscribers = [];
+  
   fb.auth.signOut();
-  currentUser=null;
-  hide('app'); show('sc-login');
-  $('l-email').value=''; $('l-senha').value='';
+  currentUser = null;
+  
+  hide('app'); 
+  show('sc-login');
+  
+  // Limpa campos e reseta botão
+  $('l-email').value = ''; 
+  $('l-senha').value = '';
+  const btn = $('btn-login');
+  if(btn) { btn.disabled = false; btn.innerHTML = 'Entrar'; }
 }
 
 // ── DATA LOADING (REAL-TIME) ────────────────
@@ -446,22 +422,26 @@ function formatarPendenciaSV(ts) {
 }
 
 function setupRealtime(){
+  // Limpa listeners antigos se houver
+  unsubscribers.forEach(unsub => unsub());
+  unsubscribers = [];
+
   // Listeners para atualização automática do STATE e UI usando padrão Compat
-  fb.db.collection("pacientes").orderBy("criado_em", "desc").onSnapshot(snap => {
+  const u1 = fb.db.collection("pacientes").orderBy("criado_em", "desc").onSnapshot(snap => {
     STATE.pacientes = snap.docs.map(d => { 
       let data = d.data(); 
       data.ala = data.ala || data.leito || '—'; 
       data.criado_em = formatarTimestamp(data.criado_em);
-      // Garantir pendência inicial para pacientes antigos
       if (!data.proximo_sv && data.status === 'internado') {
-        data.proximo_sv = Date.now() - 10000; // Coloca como pendente imediato
+        data.proximo_sv = Date.now() - 10000;
       }
       return { id: d.id, ...data }; 
     });
     refreshUI();
   });
+  unsubscribers.push(u1);
 
-  fb.db.collection("prescricoes").orderBy("criado_em", "desc").onSnapshot(snap => {
+  const u2 = fb.db.collection("prescricoes").orderBy("criado_em", "desc").onSnapshot(snap => {
     const isFirstLoad = STATE.prescricoes.length === 0;
     const oldPresc = [...STATE.prescricoes];
     STATE.prescricoes = snap.docs.map(d => { let data = d.data(); data.ala = data.ala || data.leito || '—'; data.criado_em = formatarTimestamp(data.criado_em); return { id: d.id, ...data }; });
@@ -485,21 +465,25 @@ function setupRealtime(){
     }
     refreshUI();
   });
+  unsubscribers.push(u2);
 
-  fb.db.collection("notificacoes").orderBy("criado_em", "desc").limit(20).onSnapshot(snap => {
+  const u3 = fb.db.collection("notificacoes").orderBy("criado_em", "desc").limit(20).onSnapshot(snap => {
     STATE.notificacoes = snap.docs.map(d => { let data = d.data(); data.criado_em = formatarTimestamp(data.criado_em); return { id: d.id, ...data }; });
     renderNotifications();
   });
+  unsubscribers.push(u3);
 
-  fb.db.collection("relatorios").orderBy("criado_em", "desc").onSnapshot(snap => {
+  const u4 = fb.db.collection("relatorios").orderBy("criado_em", "desc").onSnapshot(snap => {
     STATE.relatorios = snap.docs.map(d => { let data = d.data(); data.ala = data.ala || data.leito || '—'; data.criado_em = formatarTimestamp(data.criado_em); return { id: d.id, ...data }; });
     refreshUI();
   });
+  unsubscribers.push(u4);
 
-  fb.db.collection("historico").orderBy("criado_em", "desc").onSnapshot(snap => {
+  const u5 = fb.db.collection("historico").orderBy("criado_em", "desc").onSnapshot(snap => {
     STATE.historico = snap.docs.map(d => { let data = d.data(); data.ala = data.ala || data.leito || '—'; data.criado_em = formatarTimestamp(data.criado_em); return { id: d.id, ...data }; });
     refreshUI();
   });
+  unsubscribers.push(u5);
 
   // Alas — disponível para todos
   fb.db.collection("alas").orderBy("nome", "asc").onSnapshot(snap => {
@@ -2331,12 +2315,20 @@ async function imprimirPrescricaoPDF(id) {
   fb.auth.onAuthStateChanged(async (user) => {
     if (user) {
       console.log("Sessão ativa:", user.email);
+      // Evita carregar duas vezes se já estiver dentro
+      if ($('app').style.display === 'flex' && currentUser) return;
+      
       const userDoc = await fb.db.collection("funcionarios").doc(user.email).get();
       if (userDoc.exists) {
         currentUser = userDoc.data();
+        currentUser.id = user.uid;
+        await entrarNoSistema();
+      } else if (user.email === "alefdias44@cejam.com") {
+        // Cria perfil automático para o administrador mestre
+        currentUser = { id: user.uid, nome: "Alef Dias", email: user.email, cargo: "admin", ativo: true, primeiro_acesso: false };
+        await fb.db.collection("funcionarios").doc(user.email).set({ ...currentUser, criado_em: fb.serverTimestamp() });
         await entrarNoSistema();
       } else {
-        // Se autenticado mas sem perfil, volta pro login
         show('sc-login');
       }
     } else {
