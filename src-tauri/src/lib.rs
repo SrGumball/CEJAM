@@ -99,9 +99,8 @@ async fn cmd_login_nativo(email: String, senha: String) -> Result<LoginResponse,
             message: user_msg.to_string(),
             uid: None,
             id_token: None,
-_string())?;
-
-    Ok(token)
+        })
+    }
 }
 
 #[tauri::command]
