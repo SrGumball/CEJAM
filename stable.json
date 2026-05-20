@@ -1,0 +1,43 @@
+{
+  "version": "1.1.1",
+  "notes": "Build automatizada do sistema CEJAM.",
+  "pub_date": "2026-05-20T21:20:06.607Z",
+  "platforms": {
+    "darwin-aarch64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUL0paZ3UvNnBWSUFSbzZPalV2bExkSVRhN2pFN1dqQkJNZWk2VE8rMHlFUGhwMFNrRlM0eVpZZitmSktWQlNsUWYxRXNkdXVoTnExak1jNUFFeEVEY1YrQjBRZ1hLWFFjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc5MzExNjIyCWZpbGU6Q0VKQU0uYXBwLnRhci5negplU0Mzakd5SUtpM1J4eW1PcHNoYW92MnZYZ0JkRWRaNk0rc2FDMFVYaHlxb3VXc011WUQweW9VUllFdDVQV1BUZjBaQkZWcjhnUy9EUzN1QTA1SnNDZz09Cg==",
+      "url": "https://github.com/SrGumball/CEJAM/releases/download/v1.1.1/CEJAM_aarch64.app.tar.gz"
+    },
+    "darwin-aarch64-app": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUL0paZ3UvNnBWSUFSbzZPalV2bExkSVRhN2pFN1dqQkJNZWk2VE8rMHlFUGhwMFNrRlM0eVpZZitmSktWQlNsUWYxRXNkdXVoTnExak1jNUFFeEVEY1YrQjBRZ1hLWFFjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc5MzExNjIyCWZpbGU6Q0VKQU0uYXBwLnRhci5negplU0Mzakd5SUtpM1J4eW1PcHNoYW92MnZYZ0JkRWRaNk0rc2FDMFVYaHlxb3VXc011WUQweW9VUllFdDVQV1BUZjBaQkZWcjhnUy9EUzN1QTA1SnNDZz09Cg==",
+      "url": "https://github.com/SrGumball/CEJAM/releases/download/v1.1.1/CEJAM_aarch64.app.tar.gz"
+    },
+    "linux-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUL0paZ3UvNnBWSU9TckxtbnpId1ZWOXVsTTVjbXR1cWlGcXBXMWJjQ1Bjdyt6TjFKR0VhcEo5NGJZYWd6MlhQVlAxNnlrOEMraGdzdkpvaFBrb3UyWjErMXFnV0VEYXdJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc5MzExNzc1CWZpbGU6Q0VKQU1fMS4xLjFfYW1kNjQuQXBwSW1hZ2UKdUorKzFtWkxyeTNGT0tTSXBFaDZ0Y0ZKVkxwZ3J0UHlwNWo0UC9OZkpHQTd5WUpIV2FITnp6bkM1NDFwZTNFS1ZDTXNKR2tPcmUvTXIrK0xHR25JQkE9PQo=",
+      "url": "https://github.com/SrGumball/CEJAM/releases/download/v1.1.1/CEJAM_1.1.1_amd64.AppImage"
+    },
+    "linux-x86_64-appimage": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUL0paZ3UvNnBWSU9TckxtbnpId1ZWOXVsTTVjbXR1cWlGcXBXMWJjQ1Bjdyt6TjFKR0VhcEo5NGJZYWd6MlhQVlAxNnlrOEMraGdzdkpvaFBrb3UyWjErMXFnV0VEYXdJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc5MzExNzc1CWZpbGU6Q0VKQU1fMS4xLjFfYW1kNjQuQXBwSW1hZ2UKdUorKzFtWkxyeTNGT0tTSXBFaDZ0Y0ZKVkxwZ3J0UHlwNWo0UC9OZkpHQTd5WUpIV2FITnp6bkM1NDFwZTNFS1ZDTXNKR2tPcmUvTXIrK0xHR25JQkE9PQo=",
+      "url": "https://github.com/SrGumball/CEJAM/releases/download/v1.1.1/CEJAM_1.1.1_amd64.AppImage"
+    },
+    "linux-x86_64-deb": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUL0paZ3UvNnBWSUJIc2E4bldBcXRUdHJ1RUk3MHlnM1dPamd3cUt4TjA0ckJWQTJlZWE4aUJlbWRab0U1SUF2YVBLOWhzVlZSckNkYk1VVkZVMklwRlpSUjZBVmtrdVEwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc5MzExNzc1CWZpbGU6Q0VKQU1fMS4xLjFfYW1kNjQuZGViCjFhN2VMVlNvUTBBdjNqY1AyaFM2dnpnQ01qc1BwQ21hSWNsUWQrdGxxWVhybHJuU3dFRVkwY1B0NmkrSzB4dTVkWWU1VXZaTDJ1bGtPU1ZudFNnSENBPT0K",
+      "url": "https://github.com/SrGumball/CEJAM/releases/download/v1.1.1/CEJAM_1.1.1_amd64.deb"
+    },
+    "linux-x86_64-rpm": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUL0paZ3UvNnBWSUdMWkVIWC9DWlJHeUFYcVVVbXJMU3E0RkcwQ3NEM2REL3BkQnRvZHBuTndIUjZvODRYVC9wYWNnL1QyZzFDbUx0Qmg5TnE5U000a2NPT2VPcnJBT1FRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc5MzExNzc1CWZpbGU6Q0VKQU0tMS4xLjEtMS54ODZfNjQucnBtCm1IdHJWcFZxR1BZaTNybXVQTVpkYVdpMy9oWC9nbW1xRlhNaXNFejhQYzA3Qk8xMmFkY1FKRTl6Tkw0V2dKRDNMdGpnRGdhbHU0WE1iaUtudzZJS0R3PT0K",
+      "url": "https://github.com/SrGumball/CEJAM/releases/download/v1.1.1/CEJAM-1.1.1-1.x86_64.rpm"
+    },
+    "windows-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUL0paZ3UvNnBWSUlDSUx0Y2ErZmp5dE4rY1ZJU0crWUoxS1VGbi82ZE9Jell3dDNZTU9MK0h0bUwxWHFRUTFIajNDNzlKRGdwMWtDdnhoRGZ0ekp5aWtIUDArTllpSHdFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc5MzEyMDAyCWZpbGU6Q0VKQU1fMS4xLjFfeDY0X2VuLVVTLm1zaQpkeFJKTHUzZTZWR0lnMThBSE41NTRrcXc3MitrMmhOUS9LbThwMUduK3lYYXlBUHFObnpWOW9jN2dJcTUxVHYwTHR4RWNvNkJMVms0aGd4Vkl2cG5EQT09Cg==",
+      "url": "https://github.com/SrGumball/CEJAM/releases/download/v1.1.1/CEJAM_1.1.1_x64_en-US.msi"
+    },
+    "windows-x86_64-msi": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUL0paZ3UvNnBWSUlDSUx0Y2ErZmp5dE4rY1ZJU0crWUoxS1VGbi82ZE9Jell3dDNZTU9MK0h0bUwxWHFRUTFIajNDNzlKRGdwMWtDdnhoRGZ0ekp5aWtIUDArTllpSHdFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc5MzEyMDAyCWZpbGU6Q0VKQU1fMS4xLjFfeDY0X2VuLVVTLm1zaQpkeFJKTHUzZTZWR0lnMThBSE41NTRrcXc3MitrMmhOUS9LbThwMUduK3lYYXlBUHFObnpWOW9jN2dJcTUxVHYwTHR4RWNvNkJMVms0aGd4Vkl2cG5EQT09Cg==",
+      "url": "https://github.com/SrGumball/CEJAM/releases/download/v1.1.1/CEJAM_1.1.1_x64_en-US.msi"
+    },
+    "windows-x86_64-nsis": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUL0paZ3UvNnBWSUlGTG9UeFFlREZDVHpxeHc1L2szcDduZGdUN3g4c3dLUWdpTExJRHZDNUNTK1RhOGlkNEYwVm41UnAxOXNBVmpqbk03QVV3WWtlTXJGeE9TVjZPamcwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc5MzEyMDAyCWZpbGU6Q0VKQU1fMS4xLjFfeDY0LXNldHVwLmV4ZQpSdk9Ncm1iYWUrRjFJRXBMZWlBUnVNNS9GR1FQOWV5MTIzZlZyMnhyeXN2UC9tS3o5NHJsNTFrTnhHWVkyZkluVE55Z1kvV205SGw0RmI0b2prcW9Edz09Cg==",
+      "url": "https://github.com/SrGumball/CEJAM/releases/download/v1.1.1/CEJAM_1.1.1_x64-setup.exe"
+    }
+  }
+}
