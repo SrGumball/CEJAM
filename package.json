@@ -1,6 +1,6 @@
 {
   "name": "cejam",
-  "version": "1.0.2",
+  "version": "1.0.3-beta.1",
   "description": "CEJAM - Sistema Hospitalar",
   "scripts": {
     "dev": "tauri dev",
