@@ -2508,7 +2508,7 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 // ── UPDATE LOGIC ────────────────────────────────
 
-async function checarAtualizacaoSistema(channel = 'stable') {
+window.checarAtualizacaoSistema = async function(channel = 'stable') {
   om('m-update');
   $('update-body').innerHTML = '<div class="loading-spinner" style="margin:0 auto 15px"></div>Procurando novas versões...';
   $('update-actions').innerHTML = `<button class="btn btn-outline" onclick="cm('m-update')">Cancelar</button>`;
@@ -2525,7 +2525,7 @@ async function checarAtualizacaoSistema(channel = 'stable') {
       `;
       $('update-actions').innerHTML = `
         <button class="btn btn-outline" onclick="cm('m-update')">Depois</button>
-        <button class="btn btn-primary" onclick="instalarAtualizacaoSistema('\${channel}')">Instalar e Reiniciar</button>
+        <button class="btn btn-primary" onclick="window.instalarAtualizacaoSistema('\${channel}')">Instalar e Reiniciar</button>
       `;
     } else {
       $('update-body').innerHTML = `
@@ -2543,9 +2543,9 @@ async function checarAtualizacaoSistema(channel = 'stable') {
     `;
     $('update-actions').innerHTML = `<button class="btn btn-outline" onclick="cm('m-update')">Fechar</button>`;
   }
-}
+};
 
-async function instalarAtualizacaoSistema(channel) {
+window.instalarAtualizacaoSistema = async function(channel) {
   $('update-body').innerHTML = '<div class="loading-spinner" style="margin:0 auto 15px"></div>Baixando e instalando...<br><small style="color:var(--text3);margin-top:10px;display:block">O aplicativo será reiniciado automaticamente.</small>';
   $('update-actions').innerHTML = ``;
 
@@ -2560,4 +2560,4 @@ async function instalarAtualizacaoSistema(channel) {
     `;
     $('update-actions').innerHTML = `<button class="btn btn-outline" onclick="cm('m-update')">Fechar</button>`;
   }
-}
+};
