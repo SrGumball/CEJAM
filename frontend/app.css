@@ -199,7 +199,7 @@ tr:hover td:first-child{border-left:3px solid var(--green);padding-left:13px;}
 .sec-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
 
 /* ── MODAIS ── */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:500;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:99999;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
 .modal-overlay.open{display:flex;}
 .modal{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-lg);width:580px;max-width:96vw;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.15),0 4px 16px rgba(0,0,0,0.1);animation:modalIn .3s cubic-bezier(0.34,1.56,0.64,1);}
 @keyframes modalIn{from{opacity:0;transform:scale(0.95);}to{opacity:1;transform:scale(1);}}

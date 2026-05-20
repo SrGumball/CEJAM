@@ -244,6 +244,7 @@ async function doLogin(){
 
   try {
     console.log("1. Iniciando login...");
+    await fb.auth.setPersistence(firebase.auth.Auth.Persistence.NONE);
     await fb.auth.signInWithEmailAndPassword(email, senha);
     // O fluxo continuará no onAuthStateChanged para evitar duplicidade
   } catch(e){
