@@ -611,7 +611,7 @@ const panelTitles={
   'adm-pacs':'Pacientes','adm-hist':'Histórico Geral',
   'med-dash':'Dashboard Médico','med-pacs':'Pacientes','med-rx':'Prescrições',
   'med-relats':'Relatórios de Enfermagem','med-hist':'Histórico',
-  'farm-disp':'Dispensação','farm-hist':'Histórico de Dispensações','farm-altas':'Altas',
+  'farm-disp':'Dispensação','farm-hist':'Histórico de Dispensações','farm-altas':'Altas','farm-pedido':'Pedido de Compra',
   'enf-consumo':'Consumo Diário',
   'enf-painel':'Painel de Enfermagem','enf-pacs':'Pacientes',
   'enf-adm':'Administração de Medicamentos','enf-relat':'Relatórios Diários','enf-sv':'Sinais Vitais',
@@ -718,6 +718,7 @@ function buildPanel(id){
     case 'farm-disp':  return pDisp();
     case 'farm-hist':  return pHistFarm();
     case 'farm-altas': return pFarmAltas();
+    case 'farm-pedido': return pFarmPedido();
     case 'enf-consumo': return pFarmConsumo();
     case 'enf-painel': return pEnfPainel();
     case 'enf-adm':    return pEnfAdm();
