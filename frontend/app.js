@@ -2519,13 +2519,13 @@ window.checarAtualizacaoSistema = async function(channel = 'stable') {
     if (updateInfo) {
       $('update-body').innerHTML = `
         <div style="font-size: 32px; margin-bottom: 10px;">📦</div>
-        <div>Nova versão disponível: <strong>\${updateInfo.version}</strong></div>
-        <div style="font-size: 11px; margin-top: 10px; color: var(--text3);">Data de lançamento: \${updateInfo.date || 'Recente'}</div>
-        <div style="font-size: 11px; margin-top: 5px; color: var(--text3);">Tamanho: \${(updateInfo.body || 'Correções e melhorias')}</div>
+        <div>Nova versão disponível: <strong>${updateInfo.version}</strong></div>
+        <div style="font-size: 11px; margin-top: 10px; color: var(--text3);">Data de lançamento: ${updateInfo.date || 'Recente'}</div>
+        <div style="font-size: 11px; margin-top: 5px; color: var(--text3);">Tamanho: ${(updateInfo.body || 'Correções e melhorias')}</div>
       `;
       $('update-actions').innerHTML = `
         <button class="btn btn-outline" onclick="cm('m-update')">Depois</button>
-        <button class="btn btn-primary" onclick="window.instalarAtualizacaoSistema('\${channel}')">Instalar e Reiniciar</button>
+        <button class="btn btn-primary" onclick="window.instalarAtualizacaoSistema('${channel}')">Instalar e Reiniciar</button>
       `;
     } else {
       $('update-body').innerHTML = `
@@ -2539,7 +2539,7 @@ window.checarAtualizacaoSistema = async function(channel = 'stable') {
     $('update-body').innerHTML = `
       <div style="font-size: 32px; margin-bottom: 10px;">⚠️</div>
       <div style="color: var(--red);">Falha ao buscar atualização.</div>
-      <div style="font-size: 11px; margin-top: 10px; color: var(--text3);">\${err}</div>
+      <div style="font-size: 11px; margin-top: 10px; color: var(--text3);">${err}</div>
     `;
     $('update-actions').innerHTML = `<button class="btn btn-outline" onclick="cm('m-update')">Fechar</button>`;
   }
@@ -2556,7 +2556,7 @@ window.instalarAtualizacaoSistema = async function(channel) {
     $('update-body').innerHTML = `
       <div style="font-size: 32px; margin-bottom: 10px;">❌</div>
       <div style="color: var(--red);">Erro durante a instalação.</div>
-      <div style="font-size: 11px; margin-top: 10px; color: var(--text3);">\${err}</div>
+      <div style="font-size: 11px; margin-top: 10px; color: var(--text3);">${err}</div>
     `;
     $('update-actions').innerHTML = `<button class="btn btn-outline" onclick="cm('m-update')">Fechar</button>`;
   }
