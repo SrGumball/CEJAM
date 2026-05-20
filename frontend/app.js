@@ -2505,3 +2505,58 @@ window.addEventListener('DOMContentLoaded', () => {
   
   initUpdater();
 });
+// ── UPDATE LOGIC ────────────────────────────────
+
+async function checarAtualizacaoSistema(channel = 'stable') {
+  om('m-update');
+  $('update-body').innerHTML = '<div class="loading-spinner" style="margin:0 auto 15px"></div>Procurando novas versões...';
+  $('update-actions').innerHTML = `<button class="btn btn-outline" onclick="cm('m-update')">Cancelar</button>`;
+
+  try {
+    const updateInfo = await window.__TAURI__.core.invoke('cmd_verificar_atualizacao', { channel });
+    
+    if (updateInfo) {
+      $('update-body').innerHTML = `
+        <div style="font-size: 32px; margin-bottom: 10px;">📦</div>
+        <div>Nova versão disponível: <strong>\${updateInfo.version}</strong></div>
+        <div style="font-size: 11px; margin-top: 10px; color: var(--text3);">Data de lançamento: \${updateInfo.date || 'Recente'}</div>
+        <div style="font-size: 11px; margin-top: 5px; color: var(--text3);">Tamanho: \${(updateInfo.body || 'Correções e melhorias')}</div>
+      `;
+      $('update-actions').innerHTML = `
+        <button class="btn btn-outline" onclick="cm('m-update')">Depois</button>
+        <button class="btn btn-primary" onclick="instalarAtualizacaoSistema('\${channel}')">Instalar e Reiniciar</button>
+      `;
+    } else {
+      $('update-body').innerHTML = `
+        <div style="font-size: 32px; margin-bottom: 10px;">✅</div>
+        <div>O sistema já está na versão mais recente.</div>
+      `;
+      $('update-actions').innerHTML = `<button class="btn btn-outline" onclick="cm('m-update')">Fechar</button>`;
+    }
+  } catch (err) {
+    console.error(err);
+    $('update-body').innerHTML = `
+      <div style="font-size: 32px; margin-bottom: 10px;">⚠️</div>
+      <div style="color: var(--red);">Falha ao buscar atualização.</div>
+      <div style="font-size: 11px; margin-top: 10px; color: var(--text3);">\${err}</div>
+    `;
+    $('update-actions').innerHTML = `<button class="btn btn-outline" onclick="cm('m-update')">Fechar</button>`;
+  }
+}
+
+async function instalarAtualizacaoSistema(channel) {
+  $('update-body').innerHTML = '<div class="loading-spinner" style="margin:0 auto 15px"></div>Baixando e instalando...<br><small style="color:var(--text3);margin-top:10px;display:block">O aplicativo será reiniciado automaticamente.</small>';
+  $('update-actions').innerHTML = ``;
+
+  try {
+    await window.__TAURI__.core.invoke('cmd_instalar_atualizacao', { channel });
+  } catch (err) {
+    console.error(err);
+    $('update-body').innerHTML = `
+      <div style="font-size: 32px; margin-bottom: 10px;">❌</div>
+      <div style="color: var(--red);">Erro durante a instalação.</div>
+      <div style="font-size: 11px; margin-top: 10px; color: var(--text3);">\${err}</div>
+    `;
+    $('update-actions').innerHTML = `<button class="btn btn-outline" onclick="cm('m-update')">Fechar</button>`;
+  }
+}
