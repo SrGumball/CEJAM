@@ -542,7 +542,7 @@ const navConfig = {
     {id:'adm-mon',icon:'👁️',label:'Monitoramento'},
     {id:'adm-pacs',icon:'👤',label:'Pacientes'},
     {sec:'Relatórios'},{id:'adm-hist',icon:'📊',label:'Histórico Geral'},
-    {id:'farm-consumo',icon:'📦',label:'Consumo Diário'},
+    {id:'enf-consumo',icon:'📦',label:'Consumo Diário'},
     {id:'farm-pedido',icon:'📋',label:'Pedido de Compra'},
   ],
   medico:[
@@ -553,10 +553,7 @@ const navConfig = {
     {id:'med-hist',icon:'📊',label:'Histórico'},
   ],
   farmacia:[
-    {sec:'Farmácia'},{id:'farm-disp',icon:'💊',label:'Dispensação',badge:'disp'},
-    {id:'farm-hist',icon:'📊',label:'Histórico'},
-    {id:'farm-consumo',icon:'📦',label:'Consumo Diário'},
-    {id:'farm-pedido',icon:'📋',label:'Pedido de Compra'},
+    {sec:'Farmácia'},{id:'farm-disp',icon:'💊',label:'Dispensação',badge:'disp'},{id:'farm-hist',icon:'📊',label:'Histórico'},{id:'farm-pedido',icon:'📋',label:'Pedido de Compra'},{id:'farm-altas',icon:'🏥',label:'Altas'},
   ],
   enfermagem:[
     {sec:'Enfermagem'},{id:'enf-painel',icon:'📈',label:'Painel'},
@@ -564,6 +561,7 @@ const navConfig = {
     {id:'enf-adm',icon:'💉',label:'Administrar',badge:'adminPend'},
     {id:'enf-relat',icon:'📝',label:'Relatórios Diários'},
     {id:'enf-sv',icon:'❤️',label:'Sinais Vitais'},
+    {id:'enf-consumo',icon:'📦',label:'Consumo Diário'},
   ],
   tecnico:[
     {sec:'Ala'},
@@ -613,8 +611,8 @@ const panelTitles={
   'adm-pacs':'Pacientes','adm-hist':'Histórico Geral',
   'med-dash':'Dashboard Médico','med-pacs':'Pacientes','med-rx':'Prescrições',
   'med-relats':'Relatórios de Enfermagem','med-hist':'Histórico',
-  'farm-disp':'Dispensação','farm-hist':'Histórico de Dispensações',
-  'farm-consumo':'Consumo Diário',
+  'farm-disp':'Dispensação','farm-hist':'Histórico de Dispensações','farm-altas':'Altas',
+  'enf-consumo':'Consumo Diário',
   'enf-painel':'Painel de Enfermagem','enf-pacs':'Pacientes',
   'enf-adm':'Administração de Medicamentos','enf-relat':'Relatórios Diários','enf-sv':'Sinais Vitais',
 };
@@ -719,8 +717,8 @@ function buildPanel(id){
     case 'med-relats': return pRelatsMed();
     case 'farm-disp':  return pDisp();
     case 'farm-hist':  return pHistFarm();
-    case 'farm-consumo': return pFarmConsumo();
-    case 'farm-pedido': return pFarmPedido();
+    case 'farm-altas': return pFarmAltas();
+    case 'enf-consumo': return pFarmConsumo();
     case 'enf-painel': return pEnfPainel();
     case 'enf-adm':    return pEnfAdm();
     case 'enf-relat':  return pEnfRelat();
@@ -901,7 +899,10 @@ function pPerfilPaciente(id) {
 
     <!-- Prescrições do Paciente -->
     <div class="tcard">
-      <div class="thead-row"><div class="ttitle">Prescrições Ativas e Histórico</div></div>
+      <div class="thead-row">
+        <div class="ttitle">Prescrições Ativas e Histórico</div>
+        ${currentUser?.cargo === 'medico' && p.status === 'internado' ? `<button class="btn btn-primary btn-sm" onclick="abrirNovaPrescricao('${p.id}')">+ Nova Prescrição</button>` : ''}
+      </div>
       <table>
         <thead><tr><th>Data</th><th>Medicamento</th><th>Dose/Freq</th><th>Via</th><th>Médico</th><th>Status</th><th>Ações</th></tr></thead>
         <tbody>
@@ -1060,12 +1061,12 @@ function groupPrescByPac(prescList) {
 }
 
 function pDisp(){
-  const pend = STATE.prescricoes.filter(p => p.status === 'ativa' || p.status === 'dispensada');
+  const pend = STATE.prescricoes.filter(p => p.status === 'ativa');
   const grouped = groupPrescByPac(pend);
-  const ativasCount = pend.filter(p => p.status === 'ativa').length;
+  const ativasCount = pend.length;
   
   return `<div class="sec-hdr"><div><div class="sec-title">Fila de Dispensação</div><div class="sec-sub">${ativasCount} aguardando dispensação imediata</div></div></div>
-  <div class="alert a-warn">⚠️ Confira alergias do paciente antes de dispensar. As prescrições já dispensadas aparecerão como "Com a Enfermagem" até o próximo horário.</div>
+  <div class="alert a-warn">⚠️ Confira alergias do paciente antes de dispensar. Após a 1ª dispensação, a medicação ficará sob responsabilidade da Enfermagem para as próximas doses.</div>
   
   <div class="bulk-container">
     ${grouped.length === 0 ? `<div class="tcard" style="text-align:center;padding:48px;color:var(--green)">✓ Tudo em dia. Nenhuma medicação pendente no momento.</div>`
@@ -1320,13 +1321,37 @@ function filtrarTabelaPacientes() {
   });
 }
 
+function pFarmAltas(){
+  const altas = STATE.pacientes.filter(p => p.status === 'alta');
+  if (altas.length === 0) {
+    return `<div class="tcard"><div style="text-align:center;padding:40px;color:var(--text3)">Nenhuma alta registrada.</div></div>`;
+  }
+  return `<div class="sec-hdr"><div class="sec-title">📦 Altas</div><div class="sec-sub">Pacientes em alta e número de prescrições ativas</div></div>
+    <div class="tcard">
+      <table>
+        <thead><tr><th>Paciente</th><th>Ala</th><th>Data Alta</th><th>Prescrições Ativas</th></tr></thead>
+        <tbody>${altas.map(p => {
+          const presc = STATE.prescricoes.filter(pr => pr.pac_id === p.id && (pr.status === 'ativa' || pr.status === 'dispensada'));
+          const count = presc.length;
+          return `<tr>
+            <td><strong>${p.nome}</strong></td>
+            <td class="mono">${p.ala}</td>
+            <td class="mono">${p.data_alta || p.alta || '—'}</td>
+            <td class="mono">${count}</td>
+          </tr>`;
+        }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
 function pFarmConsumo(){
   // Datas padrão: início do mês atual até hoje
   const hoje = new Date();
   const inicioPadrao = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0];
   const fimPadrao = hoje.toISOString().split('T')[0];
 
-  return `<div class="sec-hdr"><div><div class="sec-title">📦 Consumo de Medicamentos</div><div class="sec-sub">Quantidade real dispensada por período — sem identificação de paciente</div></div></div>
+  return `<div class="sec-hdr"><div><div class="sec-title">📦 Consumo de Medicamentos</div><div class="sec-sub">Quantidade real administrada por período — sem identificação de paciente</div></div></div>
 
   <div class="tcard" style="margin-bottom:16px">
     <div class="thead-row"><div class="ttitle">🔍 Filtrar Período</div></div>
@@ -1375,9 +1400,9 @@ function aplicarFiltroConsumo() {
     return;
   }
 
-  // Filtra apenas dispensações (saídas reais do estoque) no período
+  // Filtra apenas administrações (saídas reais do estoque) no período
   const dispensadas = STATE.historico.filter(h => {
-    if (h.tipo !== 'Dispensação') return false;
+    if (h.tipo !== 'Administração') return false;
     if (!h.criado_em) return false;
     // criado_em pode ser Timestamp Firebase ou string
     let dt;
@@ -1395,7 +1420,7 @@ function aplicarFiltroConsumo() {
     resultado.innerHTML = `
       <div class="tcard">
         <div style="text-align:center;padding:40px;color:var(--text3)">
-          Nenhuma dispensação encontrada no período de <strong>${inicioStr.split('-').reverse().join('/')}</strong>
+          Nenhuma administração encontrada no período de <strong>${inicioStr.split('-').reverse().join('/')}</strong>
           até <strong>${fimStr.split('-').reverse().join('/')}</strong>.
         </div>
       </div>`;
@@ -1459,7 +1484,7 @@ function aplicarFiltroConsumo() {
       <div class="stat-card">
         <div class="stat-label">Medicamentos Diferentes</div>
         <div class="stat-val" style="color:var(--green)">${qtdMeds}</div>
-        <div class="stat-sub">Tipos únicos dispensados</div>
+        <div class="stat-sub">Tipos únicos administrados</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Período</div>
@@ -1608,6 +1633,14 @@ function abrirAdm(id) {
   if (p) abrirAdmLote(p.pac_id, [id]);
 }
 
+function abrirNovaPrescricao(pacId) {
+  om('m-rx');
+  const sel = document.getElementById('rx-pac');
+  if (sel && pacId) {
+    sel.value = pacId;
+  }
+}
+
 function abrirAdmLote(pacId, specificIds = null) {
   if (specificIds) _loteIds = specificIds;
   else {
@@ -1673,7 +1706,7 @@ async function confirmarAdmLote() {
       
       const ref = fb.db.collection("prescricoes").doc(id);
       batch.update(ref, { 
-        status: finalizou ? 'concluida' : 'ativa',
+        status: finalizou ? 'concluida' : 'dispensada',
         doses_adm: fb.increment(1),
         ultima_adm: dataHoraFmt,
         proxima_dose: proxima
@@ -2310,6 +2343,94 @@ async function imprimirPrescricaoPDF(id) {
   }
 }
 
+// ── UPDATER (ATUALIZAÇÕES) ────────────────
+let appCanal = 'stable';
+let appVersao = 'v--';
+
+async function initUpdater() {
+  try {
+    if (!window.__TAURI__) return;
+    
+    appVersao = await window.__TAURI__.app.getVersion();
+    appCanal = (appVersao.includes('-beta') || appVersao.includes('-rc')) ? 'beta' : 'stable';
+    
+    const vEl = $('debug-version');
+    if (vEl) vEl.innerText = `v${appVersao} — Canal ${appCanal.toUpperCase()}`;
+    
+    const sVersao = $('settings-versao-atual');
+    const sCanal = $('settings-canal-atual');
+    if (sVersao) sVersao.innerText = `Versão atual: v${appVersao}`;
+    if (sCanal) sCanal.innerText = `Canal: ${appCanal.toUpperCase()}`;
+    
+    // Checagem silenciosa na inicialização
+    setTimeout(checkUpdateSilencioso, 3000);
+  } catch (e) {
+    console.error("Erro ao inicializar updater:", e);
+    const vEl = $('debug-version');
+    if (vEl) vEl.innerText = `Versão Local (Dev)`;
+  }
+}
+
+async function checkUpdateSilencioso() {
+  if (!window.__TAURI__) return;
+  try {
+    const res = await window.__TAURI__.core.invoke('cmd_verificar_atualizacao', { channel: appCanal });
+    if (res) {
+      $('update-new-version').innerText = "v" + res.version;
+      $('update-release-notes').innerText = res.body || "Nenhuma nota de versão fornecida.";
+      om('m-update-prompt');
+    }
+  } catch (e) {
+    console.error("Erro na checagem silenciosa:", e);
+  }
+}
+
+async function verificarAtualizacaoManual() {
+  const btn = $('btn-verificar-update');
+  if (!window.__TAURI__) {
+    toast("Atualizador não disponível (ambiente Web)", "⚠", "b-yellow");
+    return;
+  }
+  
+  btn.disabled = true;
+  btn.innerText = "Buscando...";
+  
+  try {
+    const res = await window.__TAURI__.core.invoke('cmd_verificar_atualizacao', { channel: appCanal });
+    if (res) {
+      cm('m-settings');
+      $('update-new-version').innerText = "v" + res.version;
+      $('update-release-notes').innerText = res.body || "Nenhuma nota de versão fornecida.";
+      om('m-update-prompt');
+    } else {
+      toast("Você já está na versão mais recente!", "✓", "ok");
+    }
+  } catch (e) {
+    console.error("Erro ao verificar atualização:", e);
+    toast("Erro ao checar atualizações", "⚠", "error");
+  } finally {
+    btn.disabled = false;
+    btn.innerText = "Verificar";
+  }
+}
+
+async function iniciarInstalacaoUpdate() {
+  const actions = $('update-actions');
+  const progress = $('update-progress-container');
+  
+  if(actions) actions.style.display = 'none';
+  if(progress) progress.style.display = 'block';
+  
+  try {
+    await window.__TAURI__.core.invoke('cmd_instalar_atualizacao', { channel: appCanal });
+  } catch (e) {
+    console.error("Erro ao instalar update:", e);
+    toast("Erro ao atualizar: " + e, "⚠", "error");
+    if(actions) actions.style.display = 'flex';
+    if(progress) progress.style.display = 'none';
+  }
+}
+
 // ── INIT ───────────────────────────────────
 (async function init(){
   fb.auth.onAuthStateChanged(async (user) => {
@@ -2348,7 +2469,8 @@ Object.assign(window, {
   verRx, imprimirPrescricaoPDF,
   abrirAlterarRx, filtRx, toggleFunc, abrirPerfilFunc, confirmarAlterarSenhaManual,
   salvarNovaSenha, applyTheme, abrirAdm, abrirDisp, limparNotificacoes, marcarLida,
-  abrirRelat, verRelatsPac, aplicarFiltroConsumo, salvarAla, toggleAla, abrirSV, salvarSV, abrirDispLote, abrirAdmLote, togglePacCheck, confirmarAlaTrabalho
+  abrirRelat, verRelatsPac, aplicarFiltroConsumo, salvarAla, toggleAla, abrirSV, salvarSV, abrirDispLote, abrirAdmLote, togglePacCheck, confirmarAlaTrabalho,
+  verificarAtualizacaoManual, iniciarInstalacaoUpdate, abrirNovaPrescricao
 });
 
 // Inicialização
@@ -2380,4 +2502,6 @@ window.addEventListener('DOMContentLoaded', () => {
   
   const savedTheme = localStorage.getItem('cejam_theme');
   if(savedTheme) applyTheme(savedTheme);
+  
+  initUpdater();
 });

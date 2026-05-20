@@ -10,7 +10,7 @@
     "windows": [
       {
         "title": "CEJAM — Sistema Hospitalar",
-        "url": "http://localhost:1420/index.html",
+        "url": "http://localhost:1422/index.html",
         "width": 1280,
         "height": 800,
         "minWidth": 900,
@@ -27,6 +27,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -34,5 +35,13 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://raw.githubusercontent.com/SrGumball/CEJAM/updater/stable.json"
+      ],
+      "pubkey": ""
+    }
   }
 }

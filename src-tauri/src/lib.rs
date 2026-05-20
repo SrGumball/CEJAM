@@ -216,16 +216,89 @@ async fn cmd_gerar_pedido_pdf(data: PedidoData) -> Result<String, String> {
     Ok(general_purpose::STANDARD.encode(buffer))
 }
 
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct UpdateInfo {
+    pub version: String,
+    pub body: Option<String>,
+}
+
+#[tauri::command]
+async fn cmd_verificar_atualizacao(app: tauri::AppHandle, channel: String) -> Result<Option<UpdateInfo>, String> {
+    use tauri_plugin_updater::UpdaterExt;
+    
+    let endpoint = if channel == "beta" {
+        "https://raw.githubusercontent.com/SrGumball/CEJAM/updater/beta.json"
+    } else {
+        "https://raw.githubusercontent.com/SrGumball/CEJAM/updater/stable.json"
+    };
+
+    let url = reqwest::Url::parse(endpoint).map_err(|e| format!("URL inválida: {}", e))?;
+
+    let builder = app.updater_builder()
+        .endpoints(vec![url])
+        .map_err(|e| format!("Falha ao configurar endpoints do updater: {}", e))?;
+
+    let updater = builder.build()
+        .map_err(|e| format!("Falha ao construir updater: {}", e))?;
+
+    let check_result: Result<Option<tauri_plugin_updater::Update>, tauri_plugin_updater::Error> = updater.check().await;
+    let update = check_result.map_err(|e| format!("Erro ao checar atualizações: {}", e))?;
+
+    if let Some(update) = update {
+        Ok(Some(UpdateInfo {
+            version: update.version.clone(),
+            body: update.body.clone(),
+        }))
+    } else {
+        Ok(None)
+    }
+}
+
+#[tauri::command]
+async fn cmd_instalar_atualizacao(app: tauri::AppHandle, channel: String) -> Result<String, String> {
+    use tauri_plugin_updater::UpdaterExt;
+    
+    let endpoint = if channel == "beta" {
+        "https://raw.githubusercontent.com/SrGumball/CEJAM/updater/beta.json"
+    } else {
+        "https://raw.githubusercontent.com/SrGumball/CEJAM/updater/stable.json"
+    };
+
+    let url = reqwest::Url::parse(endpoint).map_err(|e| format!("URL inválida: {}", e))?;
+
+    let builder = app.updater_builder()
+        .endpoints(vec![url])
+        .map_err(|e| format!("Falha ao configurar endpoints do updater: {}", e))?;
+
+    let updater = builder.build()
+        .map_err(|e| format!("Falha ao construir updater: {}", e))?;
+
+    let check_result: Result<Option<tauri_plugin_updater::Update>, tauri_plugin_updater::Error> = updater.check().await;
+    let update = check_result.map_err(|e| format!("Erro ao checar atualizações: {}", e))?;
+
+    if let Some(update) = update {
+        let install_result: Result<(), tauri_plugin_updater::Error> = update.download_and_install(|_, _| {}, || {}).await;
+        install_result.map_err(|e| format!("Erro ao baixar e instalar atualização: {}", e))?;
+            
+        app.restart();
+    }
+    
+    Ok("Nenhuma atualização encontrada para instalar.".to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_localhost::Builder::new(1420).build()) // INJETA SERVIDOR LOCALHTTP
+        .plugin(tauri_plugin_localhost::Builder::new(1422).build()) // INJETA SERVIDOR LOCALHTTP
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build()) // REGISTRA PLUGIN DO UPDATER
         .invoke_handler(tauri::generate_handler![
             cmd_login_nativo,
             cmd_gerar_prescricao_pdf,
-            cmd_gerar_pedido_pdf
+            cmd_gerar_pedido_pdf,
+            cmd_verificar_atualizacao,
+            cmd_instalar_atualizacao
         ])
         .run(tauri::generate_context!())
         .expect("Erro ao iniciar aplicação CEJAM");

@@ -264,7 +264,7 @@ tr:hover td:first-child{border-left:3px solid var(--green);padding-left:13px;}
 .rc-title{font-size:12px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
 
 /* ── TOASTS ── */
-.toast-area{position:fixed;bottom:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:8px;}
+.toast-area{position:fixed;bottom:60px;right:20px;z-index:999;display:flex;flex-direction:column;gap:8px;}
 .toast{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-md);padding:12px 16px;font-size:12px;color:var(--text);min-width:240px;max-width:340px;box-shadow:var(--shadow-lg);animation:slideIn .25s cubic-bezier(0.34,1.56,0.64,1);display:flex;align-items:center;gap:10px;}
 .toast.toast-error{border-left:4px solid var(--red);}
 .toast.toast-ok{border-left:4px solid var(--green);}
@@ -341,4 +341,36 @@ tr:hover td:first-child{border-left:3px solid var(--green);padding-left:13px;}
   font-weight:600;
   color:var(--text);
   font-family:'JetBrains Mono',monospace;
+}
+
+/* ── DEV BADGE ── */
+.dev-badge {
+  position: fixed;
+  bottom: 12px;
+  right: 16px;
+  background: transparent;
+  padding: 4px 10px;
+  font-size: 10px;
+  font-family: 'Inter', sans-serif;
+  z-index: 99999;
+  color: var(--text3);
+  opacity: 0.6;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all var(--transition);
+  pointer-events: none;
+}
+.dev-badge a {
+  color: var(--text3);
+  font-weight: 500;
+  text-decoration: none;
+  pointer-events: auto;
+}
+.dev-badge a:hover {
+  text-decoration: underline;
+  color: var(--green);
+}
+.dev-badge:hover {
+  opacity: 1;
 }

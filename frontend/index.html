@@ -31,7 +31,7 @@
     <div class="ferr" id="login-err">E-mail ou senha incorretos.</div>
     <button class="btn-full" id="btn-login" onclick="doLogin()">Entrar</button>
     <div class="box-hint">Acesso restrito a funcionários cadastrados</div>
-    <div id="debug-version" style="font-size: 10px; color: var(--text3); margin-top: 20px; text-align: center; opacity: 0.5;">v1.0.4 — Build Stable</div>
+    <div id="debug-version" style="font-size: 10px; color: var(--text3); margin-top: 20px; text-align: center; opacity: 0.5;">Carregando versão...</div>
   </div>
 </div>
 
@@ -456,6 +456,17 @@
 
         </div>
       </div>
+      
+      <div style="margin-top:20px; padding-top:20px; border-top:1px solid var(--border)">
+        <label class="flabel" style="margin-bottom:12px;display:block">Atualizações do Sistema</label>
+        <div style="display:flex; justify-content:space-between; align-items:center; background:var(--surface2); padding:10px 14px; border-radius:8px">
+          <div>
+            <div style="font-weight:600; font-size:14px" id="settings-versao-atual">Versão atual: v--</div>
+            <div style="font-size:12px; color:var(--text3)" id="settings-canal-atual">Canal: --</div>
+          </div>
+          <button class="btn btn-primary btn-sm" id="btn-verificar-update" onclick="verificarAtualizacaoManual()">Verificar</button>
+        </div>
+      </div>
     </div>
     <div class="modal-foot"><button class="btn btn-outline" onclick="cm('m-settings')">Fechar</button></div>
   </div>
@@ -469,6 +480,34 @@
       <div style="padding:40px 20px; text-align:center; color:var(--text3)">Nenhuma notificação nova</div>
     </div>
     <div class="modal-foot" style="justify-content:center; padding:10px"><button class="btn btn-outline btn-sm" onclick="limparNotificacoes()">Limpar Tudo</button></div>
+  </div>
+</div>
+
+<!-- Modal de Atualização -->
+<div class="modal-overlay" id="m-update-prompt">
+  <div class="modal modal-sm" style="border-top: 4px solid var(--primary)">
+    <div class="modal-head">
+      <div class="modal-title">✨ Nova Atualização Disponível!</div>
+      <button class="modal-close" onclick="cm('m-update-prompt')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert a-info" style="margin-bottom: 15px;">
+        Uma nova versão do CEJAM (<strong id="update-new-version">v--</strong>) está pronta para ser instalada.
+      </div>
+      <div id="update-release-notes" style="font-size: 13px; color: var(--text2); background: var(--surface2); padding: 10px; border-radius: 6px; max-height: 120px; overflow-y: auto; margin-bottom: 15px; white-space: pre-wrap;">
+        Notas da versão...
+      </div>
+      
+      <div id="update-progress-container" style="display: none; text-align: center; padding: 15px 0;">
+        <div class="spinner" style="margin: 0 auto 15px auto;"></div>
+        <div style="font-size: 14px; font-weight: 600; color: var(--primary);">Baixando e instalando atualização...</div>
+        <div style="font-size: 12px; color: var(--text3); margin-top: 5px;">O aplicativo será reiniciado automaticamente.</div>
+      </div>
+    </div>
+    <div class="modal-foot" id="update-actions">
+      <button class="btn btn-outline" onclick="cm('m-update-prompt')">Lembrar Depois</button>
+      <button class="btn btn-primary" onclick="iniciarInstalacaoUpdate()">✓ Atualizar Agora</button>
+    </div>
   </div>
 </div>
 
@@ -490,6 +529,10 @@
 </div>
 
 <div class="toast-area" id="toast-area"></div>
+
+<div class="dev-badge">
+  👨‍💻 Desenvolvedor: <a href="https://github.com/SrGumball" target="_blank">Alef Dias</a>
+</div>
 
 <script type="module" src="app.js"></script>
 </body>
