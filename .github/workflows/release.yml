@@ -46,7 +46,7 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: "CEJAM Hospitalar ${{ github.ref_name }}"
           releaseBody: "Build automatizada do sistema CEJAM."
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
 
