@@ -33,7 +33,7 @@
     <div class="box-hint">Acesso restrito a funcionários cadastrados</div>
     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; font-size: 11px; color: var(--text3);">
       <div id="debug-version" style="opacity: 0.7;">Carregando versão...</div>
-      <div style="cursor: pointer; opacity: 0.8; transition: 0.2s;" onclick="checarAtualizacaoSistema('stable')" onmouseover="this.style.opacity='1'; this.style.color='var(--primary)'" onmouseout="this.style.opacity='0.8'; this.style.color='var(--text3)'">🔄 Atualizar</div>
+      <div style="cursor: pointer; opacity: 0.8; transition: 0.2s;" onclick="checarAtualizacaoSistema('beta')" onmouseover="this.style.opacity='1'; this.style.color='var(--primary)'" onmouseout="this.style.opacity='0.8'; this.style.color='var(--text3)'">🔄 Atualizar</div>
     </div>
   </div>
 </div>
@@ -95,10 +95,6 @@
     <div class="topbar">
       <div class="topbar-title" id="topbar-title">Dashboard</div>
       <div style="flex:1"></div>
-      <!-- Botão de Atualização -->
-      <div id="btn-update-check" onclick="checarAtualizacaoSistema('stable')" title="Verificar Atualizações" style="cursor:pointer; position:relative; margin:0 15px; font-size:22px; display:flex; align-items:center;">
-        🔄
-      </div>
       <input class="topbar-search" placeholder="🔍 Buscar paciente..." id="search-input" oninput="handleSearch()" />
       <div id="notif-bell" onclick="om('m-notificacoes')" style="cursor:pointer; position:relative; margin:0 15px; font-size:22px;">
         🔔<span id="notif-count" style="display:none; position:absolute; top:-5px; right:-5px; background:red; color:white; font-size:10px; padding:2px 6px; border-radius:10px; font-weight:bold; border:2px solid white">0</span>
