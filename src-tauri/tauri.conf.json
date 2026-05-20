@@ -41,7 +41,7 @@
       "endpoints": [
         "https://raw.githubusercontent.com/SrGumball/CEJAM/updater/stable.json"
       ],
-      "pubkey": ""
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDIwNTVBQUZGMkU5ODI1RkYKUldUL0paZ3UvNnBWSU15Y0Vvc2kyaGppOGR2N0VtUEhFQ1RiaDF4L080T0RFa0JrMVpKSzdyLy8K"
     }
   }
 }

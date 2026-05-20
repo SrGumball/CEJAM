@@ -6,3 +6,4 @@ src-tauri/target
 *.log
 .env
 chave-admin.json
+*.key
