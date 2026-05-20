@@ -2354,7 +2354,8 @@ async function initUpdater() {
     if (!window.__TAURI__) return;
     
     appVersao = await window.__TAURI__.app.getVersion();
-    appCanal = (appVersao.includes('-beta') || appVersao.includes('-rc')) ? 'beta' : 'stable';
+    appCanal = (appVersao.includes('-beta') || appVersao.includes('-rc') || appVersao.includes('-')) ? 'beta' : 'stable';
+    window.appCanal = appCanal;
     
     const vEl = $('debug-version');
     if (vEl) vEl.innerText = `v${appVersao} — Canal ${appCanal.toUpperCase()}`;
@@ -2509,7 +2510,7 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 // ── UPDATE LOGIC ────────────────────────────────
 
-window.checarAtualizacaoSistema = async function(channel = 'stable') {
+window.checarAtualizacaoSistema = async function(channel = window.appCanal || 'stable') {
   om('m-update');
   $('update-body').innerHTML = '<div class="loading-spinner" style="margin:0 auto 15px"></div>Procurando novas versões...';
   $('update-actions').innerHTML = `<button class="btn btn-outline" onclick="cm('m-update')">Cancelar</button>`;
