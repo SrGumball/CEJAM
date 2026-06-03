@@ -1,6 +1,6 @@
 [package]
 name = "cejam"
-version = "3.0.0-beta"
+version = "3.0.0-1"
 edition = "2021"
 
 [lib]
