@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Modelo de Relatório - CEJAM</title>
+  <style>
+    @page { size: A4; margin: 20mm; }
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 0;
+      color: #333;
+      background: #f4f4f4;
+    }
+    .a4-page {
+      background: white;
+      width: 210mm;
+      min-height: 297mm;
+      margin: 20px auto;
+      padding: 20mm;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      box-sizing: border-box;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid #1e3a8a;
+      padding-bottom: 15px;
+      margin-bottom: 20px;
+    }
+    .logo-container {
+      width: 120px;
+      text-align: center;
+    }
+    /* Placeholder para a logo */
+    .logo-placeholder {
+      width: 100px;
+      height: 100px;
+      background: #1e3a8a;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      border-radius: 8px;
+      margin-bottom: 5px;
+    }
+    .header-text {
+      text-align: right;
+    }
+    .header-text h1 {
+      margin: 0;
+      font-size: 20px;
+      color: #1e3a8a;
+    }
+    .header-text p {
+      margin: 5px 0 0 0;
+      font-size: 12px;
+      color: #666;
+    }
+    .content-title {
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 30px;
+      background: #f8fafc;
+      padding: 15px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+    }
+    .info-item {
+      font-size: 14px;
+    }
+    .info-item strong {
+      display: block;
+      font-size: 12px;
+      color: #64748b;
+      text-transform: uppercase;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid #cbd5e1;
+      padding: 10px;
+      text-align: left;
+    }
+    th {
+      background: #1e3a8a;
+      color: white;
+      font-weight: 600;
+    }
+    tr:nth-child(even) {
+      background: #f8fafc;
+    }
+    .footer {
+      margin-top: 50px;
+      text-align: center;
+      font-size: 12px;
+      color: #94a3b8;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 10px;
+    }
+    .signature {
+      margin-top: 60px;
+      text-align: center;
+      width: 200px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .signature div {
+      border-top: 1px solid #333;
+      padding-top: 5px;
+      font-size: 14px;
+      font-weight: bold;
+    }
+    
+    @media print {
+      body { background: white; }
+      .a4-page { margin: 0; padding: 0; box-shadow: none; border: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="a4-page">
+    <div class="header">
+      <div class="logo-container">
+        <!-- Substituir pela tag img com a logo do usuário -->
+        <div class="logo-placeholder">LOGO<br>CEJAM</div>
+        <div style="font-size: 10px; font-weight: bold; color: #1e3a8a;">CEJAM</div>
+      </div>
+      <div class="header-text">
+        <h1>Sistema de Gestão Hospitalar</h1>
+        <p>Data de Emissão: 02/06/2026 21:55</p>
+        <p>Responsável: Alef (Admin)</p>
+      </div>
+    </div>
+
+    <div class="content-title">Relatório Médico - Evolução do Paciente</div>
+
+    <div class="info-grid">
+      <div class="info-item"><strong>Paciente:</strong> João Silva Santos</div>
+      <div class="info-item"><strong>Nascimento:</strong> 15/04/1985 (41 anos)</div>
+      <div class="info-item"><strong>Ala / Leito:</strong> UTI - Leito 05</div>
+      <div class="info-item"><strong>Data de Admissão:</strong> 01/06/2026</div>
+      <div class="info-item"><strong>Diagnóstico:</strong> Pneumonia Bacteriana</div>
+      <div class="info-item"><strong>Alergias:</strong> Penicilina</div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Data / Hora</th>
+          <th>Sinais Vitais</th>
+          <th>Evolução Clínica / Observações</th>
+          <th>Responsável</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>02/06/2026 08:00</td>
+          <td>PA: 120/80 | FC: 75 | T: 36.8 | SpO2: 98%</td>
+          <td>Paciente passou a noite bem, sem queixas de dor.</td>
+          <td>Enf. Maria Souza</td>
+        </tr>
+        <tr>
+          <td>02/06/2026 14:00</td>
+          <td>PA: 118/75 | FC: 72 | T: 37.1 | SpO2: 99%</td>
+          <td>Medicamentos administrados. Aceitou bem a dieta.</td>
+          <td>Enf. Carlos Dias</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="signature">
+      <div>Assinatura do Profissional</div>
+    </div>
+
+    <div class="footer">
+      CEJAM - Centro de Estudos e Pesquisas "Dr. João Amorim"<br>
+      Este documento é confidencial e protegido por sigilo médico.
+    </div>
+  </div>
+</body>
+</html>

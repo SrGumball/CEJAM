@@ -4,7 +4,7 @@
 import { fb } from './firebase-config.js';
 let currentUser = null;
 let unsubscribers = [];
-let STATE = { pacientes: [], prescricoes: [], relatorios: [], historico: [], funcionarios: [], alas: [], notificacoes: [] };
+let STATE = { pacientes: [], prescricoes: [], relatorios: [], historico: [], funcionarios: [], alas: [], notificacoes: [], medicamentos: [] };
 let _altaId = null, _dispId = null, _admId = null;
 let _pendingEmail = null;
 let _isAdmitting = false;
@@ -45,7 +45,13 @@ function calcularProximaDose(freq, desde = new Date()) {
   
   const proxima = new Date(desde);
   proxima.setHours(proxima.getHours() + intervalo);
-  return proxima.toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + 'h';
+  
+  // Retorna no formato DD/MM HHh para que checkTimingStatus consiga comparar entre dias
+  const dia = String(proxima.getDate()).padStart(2, '0');
+  const mes = String(proxima.getMonth() + 1).padStart(2, '0');
+  const hora = String(proxima.getHours()).padStart(2, '0');
+  const min = String(proxima.getMinutes()).padStart(2, '0');
+  return `${dia}/${mes} ${hora}:${min}h`;
 }
 
 function getAlaFromPresc(p) {
@@ -133,8 +139,8 @@ function tipoHist(t){
   const m={'Prescrição':'b-blue','Dispensação':'b-green','Administração':'b-purple','Alta':'b-orange'};
   return `<span class="badge ${m[t]||'b-gray'}">${t}</span>`;
 }
-function cargoLabel(c){return {medico:'Médico',farmacia:'Farmacêutico',enfermagem:'Enfermeiro',tecnico:'Técnico',admin:'Admin'}[c]||c;}
-function cargoColor(c){return {medico:'var(--blue-dim)',farmacia:'var(--green-dim)',enfermagem:'var(--purple-dim)',tecnico:'var(--purple-dim)',admin:'var(--yellow-dim)'}[c]||'var(--surface2)';}
+function cargoLabel(c){return {medico:'Médico',farmacia:'Farmacêutico',enfermagem:'Enfermeiro',tecnico:'Técnico',admin:'Admin',terapeuta:'Terapeuta Ocupacional'}[c]||c;}
+function cargoColor(c){return {medico:'var(--blue-dim)',farmacia:'var(--green-dim)',enfermagem:'var(--purple-dim)',tecnico:'var(--purple-dim)',admin:'var(--yellow-dim)',terapeuta:'var(--orange-dim)'}[c]||'var(--surface2)';}
 function tipoHistCor(t){
   return {'Prescrição':'var(--blue)','Dispensação':'var(--green)','Administração':'var(--purple)','Alta':'var(--orange)'}[t]||'var(--text3)';
 }
@@ -300,7 +306,7 @@ async function entrarNoSistema(){
     const role = currentUser.cargo;
     console.log("Roteando para cargo:", role);
     
-    if((role === 'tecnico' || role === 'enfermagem') && !_alaTrabalho) {
+    if((role === 'tecnico' || role === 'enfermagem' || role === 'terapeuta') && !_alaTrabalho) {
       fillAlaSel('sel-ala-trabalho');
       om('m-selecionar-ala');
     } else {
@@ -309,6 +315,7 @@ async function entrarNoSistema(){
       else if(role === 'admin') showPanel('adm-dash');
       else if(role === 'enfermagem') showPanel('enf-painel');
       else if(role === 'farmacia') showPanel('farm-disp');
+      else if(role === 'terapeuta') showPanel('to-dash');
       else showPanel('adm-dash');
       show('sc-main');
     }
@@ -326,6 +333,7 @@ function confirmarAlaTrabalho() {
   const role = currentUser.cargo;
   if(role === 'tecnico') showPanel('enf-adm');
   else if(role === 'enfermagem') showPanel('enf-painel');
+  else if(role === 'terapeuta') showPanel('to-dash');
   toast(`Ala ${ala} selecionada para o plantão`, '🏥', 'ok');
 }
 
@@ -481,7 +489,7 @@ function setupRealtime(){
   unsubscribers.push(u4);
 
   const u5 = fb.db.collection("historico").orderBy("criado_em", "desc").onSnapshot(snap => {
-    STATE.historico = snap.docs.map(d => { let data = d.data(); data.ala = data.ala || data.leito || '—'; data.criado_em = formatarTimestamp(data.criado_em); return { id: d.id, ...data }; });
+    STATE.historico = snap.docs.map(d => { let data = d.data(); data.ala = data.ala || data.leito || '—'; data.criado_em_raw = data.criado_em; data.criado_em = formatarTimestamp(data.criado_em); return { id: d.id, ...data }; });
     refreshUI();
   });
   unsubscribers.push(u5);
@@ -508,6 +516,37 @@ function setupRealtime(){
     refreshUI();
   }, err => {
     console.error("❌ Erro no snapshot de Alas:", err);
+  });
+
+  // Medicamentos — disponível para todos, gerenciado por médico/admin
+  fb.db.collection("medicamentos").orderBy("nome", "asc").onSnapshot(snap => {
+    STATE.medicamentos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // Atualizar datalist na tela
+    atualizarDatalistMeds();
+    refreshUI();
+  }, err => {
+    console.error("❌ Erro no snapshot de Medicamentos:", err);
+  });
+
+  // Migração única: importar medicamentos do datalist para Firestore se coleção vazia
+  fb.db.collection("medicamentos").limit(1).get().then(snap => {
+    if (snap.empty && ['admin','medico'].includes(currentUser.cargo)) {
+      console.log("📦 Coleção de medicamentos vazia, iniciando migração...");
+      const dl = document.getElementById('lista-meds');
+      if (!dl) return;
+      const batch = fb.db.batch();
+      dl.querySelectorAll('option').forEach(opt => {
+        const val = opt.value;
+        if (!val) return;
+        const parts = val.split(' - ');
+        const nome = parts[0].trim().toUpperCase();
+        const apresentacao = (parts[1] || '').trim().toLowerCase();
+        if (!nome) return;
+        const ref = fb.db.collection('medicamentos').doc();
+        batch.set(ref, { nome, apresentacao, criado_por: 'Sistema (importação)', criado_em: fb.serverTimestamp() });
+      });
+      batch.commit().then(() => console.log("✅ Medicamentos importados para Firestore!")).catch(e => console.error("❌ Erro na migração:", e));
+    }
   });
 
   if (currentUser.cargo === 'admin') {
@@ -540,6 +579,7 @@ const navConfig = {
     {sec:'Gestão'},{id:'adm-dash',icon:'📈',label:'Dashboard'},
     {id:'adm-funcs',icon:'👥',label:'Funcionários'},
     {id:'adm-alas',icon:'🏥',label:'Alas'},
+    {id:'adm-meds',icon:'💊',label:'Medicamentos'},
     {id:'adm-mon',icon:'👁️',label:'Monitoramento'},
     {id:'adm-pacs',icon:'👤',label:'Pacientes'},
     {sec:'Relatórios'},{id:'adm-hist',icon:'📊',label:'Histórico Geral'},
@@ -552,6 +592,7 @@ const navConfig = {
     {id:'med-rx',icon:'📋',label:'Prescrições',badge:'presc'},
     {sec:'Consulta'},{id:'med-relats',icon:'📝',label:'Relatórios Enf.'},
     {id:'med-hist',icon:'📊',label:'Histórico'},
+    {sec:'Configurações'},{id:'med-meds',icon:'💊',label:'Medicamentos'},
   ],
   farmacia:[
     {sec:'Farmácia'},{id:'farm-disp',icon:'💊',label:'Dispensação',badge:'disp'},{id:'farm-hist',icon:'📊',label:'Histórico'},{id:'farm-pedido',icon:'📋',label:'Pedido de Compra'},{id:'farm-altas',icon:'🏥',label:'Altas'},
@@ -569,6 +610,12 @@ const navConfig = {
     {id:'enf-adm',icon:'💉',label:'Administrar',badge:'adminPend'},
     {id:'enf-pacs',icon:'👤',label:'Pacientes'},
   ],
+  terapeuta:[
+    {sec:'Terapeuta Ocupacional'},
+    {id:'to-dash',icon:'🧩',label:'Painel TO'},
+    {id:'to-pacs',icon:'👤',label:'Pacientes da Ala'},
+    {id:'to-relat',icon:'📝',label:'Relatórios TO'},
+  ],
 };
 const roleInfo={
   admin:{label:'ADMIN',cls:'b-yellow',icon:'📊'},
@@ -576,6 +623,7 @@ const roleInfo={
   farmacia:{label:'FARMÁCIA',cls:'b-green',icon:'💊'},
   enfermagem:{label:'ENFER.',cls:'b-purple',icon:'🩺'},
   tecnico:{label:'TÉCNICO',cls:'b-purple',icon:'👨‍⚕️'},
+  terapeuta:{label:'TO',cls:'b-orange',icon:'🧩'},
 };
 
 function setupSidebar(){
@@ -587,7 +635,7 @@ function setupSidebar(){
   // Mostrar/Ocultar botão de trocar ala no topo
   const btnAla = $('btn-trocar-ala-top');
   if (btnAla) {
-    btnAla.style.display = (currentUser.cargo === 'enfermagem' || currentUser.cargo === 'tecnico') ? 'flex' : 'none';
+    btnAla.style.display = (currentUser.cargo === 'enfermagem' || currentUser.cargo === 'tecnico' || currentUser.cargo === 'terapeuta') ? 'flex' : 'none';
   }
 
   const nav=$('sb-nav'); nav.innerHTML='';
@@ -610,12 +658,15 @@ const panelTitles={
   'adm-dash':'Dashboard Administrativo','adm-funcs':'Gestão de Funcionários',
   'adm-mon':'Monitoramento de Equipe',
   'adm-pacs':'Pacientes','adm-hist':'Histórico Geral',
+  'adm-meds':'Gestão de Medicamentos',
   'med-dash':'Dashboard Médico','med-pacs':'Pacientes','med-rx':'Prescrições',
   'med-relats':'Relatórios de Enfermagem','med-hist':'Histórico',
+  'med-meds':'Gestão de Medicamentos',
   'farm-disp':'Dispensação','farm-hist':'Histórico de Dispensações','farm-altas':'Altas','farm-pedido':'Pedido de Compra',
   'enf-consumo':'Consumo Diário',
   'enf-painel':'Painel de Enfermagem','enf-pacs':'Pacientes',
   'enf-adm':'Administração de Medicamentos','enf-relat':'Relatórios Diários','enf-sv':'Sinais Vitais',
+  'to-dash':'Painel Terapeuta Ocupacional','to-pacs':'Pacientes da Ala','to-relat':'Relatórios de Terapia',
 };
 
 function showPanel(id){
@@ -710,6 +761,7 @@ function buildPanel(id){
     case 'adm-dash':   return pAdmDash();
     case 'adm-funcs':  return pAdmFuncs();
     case 'adm-alas':   return pAdmAlas();
+    case 'adm-meds':   case 'med-meds': return pGestaoMeds();
     case 'adm-pacs':   case 'med-pacs': case 'enf-pacs': return pPacientes();
     case 'adm-hist':   case 'med-hist': return pHistorico();
     case 'adm-mon':    return pAdmMon();
@@ -725,6 +777,9 @@ function buildPanel(id){
     case 'enf-adm':    return pEnfAdm();
     case 'enf-relat':  return pEnfRelat();
     case 'enf-sv':     return pEnfSV();
+    case 'to-dash':    return pToDash();
+    case 'to-pacs':    return pToPacs();
+    case 'to-relat':   return pToRelat();
     default: return '';
   }
 }
@@ -803,6 +858,106 @@ function pAdmAlas(){
                :`<button class="btn btn-green btn-sm" onclick="toggleAla('${a.id}')">Ativar</button>`}
     </td>
   </tr>`).join('')}</tbody></table></div>`;
+}
+
+function pGestaoMeds(){
+  const total = STATE.medicamentos.length;
+  const apresentacoes = [...new Set(STATE.medicamentos.map(m => m.apresentacao).filter(Boolean))].sort();
+  return `
+  <div class="sec-hdr">
+    <div>
+      <div class="sec-title">💊 Medicamentos</div>
+      <div class="sec-sub">${total} medicamento${total !== 1 ? 's' : ''} cadastrado${total !== 1 ? 's' : ''} · Banco da farmácia</div>
+    </div>
+    <button class="btn btn-primary" onclick="abrirNovoMed()">+ Novo Medicamento</button>
+  </div>
+
+  <div style="display:flex; gap:10px; margin-bottom:16px; align-items:center; flex-wrap:wrap">
+    <div class="fgrp" style="margin:0; flex:1; min-width:200px; max-width:400px">
+      <input type="text" id="med-search" class="fi" placeholder="🔍 Buscar medicamento..." oninput="filtrarTabelaMeds()"/>
+    </div>
+    <div class="fgrp" style="margin:0; min-width:160px">
+      <select class="fs" id="med-filter-apres" onchange="filtrarTabelaMeds()">
+        <option value="">Todas as apresentações</option>
+        ${apresentacoes.map(a => `<option value="${a}">${a}</option>`).join('')}
+      </select>
+    </div>
+  </div>
+
+  <div class="tcard">
+    <table>
+      <thead><tr><th style="width:40%">Medicamento</th><th>Apresentação</th><th>Adicionado por</th><th>Ações</th></tr></thead>
+      <tbody id="meds-tbody">
+        ${STATE.medicamentos.map(m => `<tr data-nome="${m.nome.toLowerCase()}" data-apres="${(m.apresentacao||'').toLowerCase()}">
+          <td><strong>${m.nome}</strong></td>
+          <td><span class="badge b-blue" style="font-size:10px">${m.apresentacao || '—'}</span></td>
+          <td style="font-size:11px; color:var(--text3)">${m.criado_por || '—'}</td>
+          <td style="display:flex; gap:4px">
+            <button class="btn btn-outline btn-sm" onclick="abrirEditarMed('${m.id}')">✏️ Editar</button>
+            <button class="btn btn-red btn-sm" onclick="excluirMed('${m.id}', '${m.nome.replace(/'/g,"\\'")}')">🗑️</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+function filtrarTabelaMeds(){
+  const busca = ($('med-search')?.value || '').toLowerCase();
+  const apres = ($('med-filter-apres')?.value || '').toLowerCase();
+  document.querySelectorAll('#meds-tbody tr').forEach(tr => {
+    const nome = tr.dataset.nome || '';
+    const ap = tr.dataset.apres || '';
+    tr.style.display = (nome.includes(busca) && (apres === '' || ap === apres)) ? '' : 'none';
+  });
+}
+
+function atualizarDatalistMeds(){
+  const dl = document.getElementById('lista-meds');
+  if (!dl) return;
+  dl.innerHTML = STATE.medicamentos.map(m => `<option value="${m.nome}${m.apresentacao ? ' - ' + m.apresentacao : ''}"></option>`).join('');
+}
+
+let _editMedId = null;
+function abrirNovoMed(){
+  _editMedId = null;
+  $('m-med-titulo').textContent = '💊 Novo Medicamento';
+  $('med-nome').value = '';
+  $('med-apres').value = '';
+  om('m-med');
+}
+function abrirEditarMed(id){
+  const m = STATE.medicamentos.find(x => x.id === id);
+  if (!m) return;
+  _editMedId = id;
+  $('m-med-titulo').textContent = '✏️ Editar Medicamento';
+  $('med-nome').value = m.nome;
+  $('med-apres').value = m.apresentacao || '';
+  om('m-med');
+}
+async function salvarMed(){
+  const nome = $('med-nome').value.trim().toUpperCase();
+  const apresentacao = $('med-apres').value.trim().toLowerCase();
+  if (!nome) { toast('Informe o nome do medicamento', '⚠️', 'warn'); return; }
+  try {
+    if (_editMedId) {
+      await fb.db.collection('medicamentos').doc(_editMedId).update({ nome, apresentacao, atualizado_por: currentUser.nome, atualizado_em: fb.serverTimestamp() });
+      toast('Medicamento atualizado!', '✅', 'ok');
+    } else {
+      const existe = STATE.medicamentos.find(m => m.nome === nome && m.apresentacao === apresentacao);
+      if (existe) { toast('Medicamento já cadastrado!', '⚠️', 'warn'); return; }
+      await fb.db.collection('medicamentos').add({ nome, apresentacao, criado_por: currentUser.nome, criado_em: fb.serverTimestamp() });
+      toast('Medicamento adicionado!', '💊', 'ok');
+    }
+    cm('m-med');
+  } catch(e){ toast('Erro ao salvar: ' + e.message, '❌', 'err'); }
+}
+async function excluirMed(id, nome){
+  if (!confirm(`Excluir "${nome}" da lista de medicamentos?`)) return;
+  try {
+    await fb.db.collection('medicamentos').doc(id).delete();
+    toast('Medicamento excluído!', '🗑️', 'ok');
+  } catch(e){ toast('Erro ao excluir: ' + e.message, '❌', 'err'); }
 }
 
 function pPacientes(){
@@ -1251,21 +1406,69 @@ function calcularPedidoFarmacia() {
 function imprimirPedido() {
   const div = document.getElementById('pedido-resultado');
   if (!div) return;
-  const win = window.open('', '', 'height=700,width=900');
+  imprimirHTML('Pedido de Medicamentos', 'Relatório de Projeção para Pedido', div.innerHTML);
+}
+
+function imprimirHTML(titulo, subtitulo, conteudoHTML) {
+  const win = window.open('', '', 'height=800,width=900');
   if (!win) {
-    alert("A janela de impressão foi bloqueada. Por favor, utilize o botão 'Exportar PDF' que é mais seguro e profissional.");
+    alert("A janela de impressão foi bloqueada. Verifique seu navegador.");
     return;
   }
-  win.document.write('<html><head><title>Pedido de Medicamentos - CEJAM</title>');
-  win.document.write('<style>body{font-family:sans-serif;padding:20px}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f2f2f2}h2,h3{text-align:center;margin:5px}.badge{background:#eff6ff;color:#1e40af;padding:2px 6px;border-radius:4px;font-weight:bold}.btn{display:none}</style>');
-  win.document.write('</head><body>');
-  win.document.write('<h2>CEJAM — Sistema Hospitalar</h2>');
-  win.document.write('<h3>Relatório de Projeção para Pedido</h3>');
-  win.document.write('<p style="text-align:center;font-size:12px">Data do Relatório: ' + new Date().toLocaleString('pt-BR') + '</p>');
-  win.document.write(div.innerHTML);
-  win.document.write('</body></html>');
+  
+  const logo = `
+    <img src="logo.png" style="width: 100px; height: 100px; object-fit: contain; margin-bottom: 5px; display: block; margin-left: auto; margin-right: auto;" />
+  `;
+
+  win.document.write(`
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+      <meta charset="UTF-8">
+      <title>${titulo} - CEJAM</title>
+      <style>
+        @page { size: A4; margin: 20mm; }
+        body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; color: #333; background: #fff; }
+        .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #1e3a8a; padding-bottom: 15px; margin-bottom: 20px; }
+        .logo-container { width: 120px; text-align: center; }
+        .header-text { text-align: right; }
+        .header-text h1 { margin: 0; font-size: 20px; color: #1e3a8a; }
+        .header-text p { margin: 5px 0 0 0; font-size: 12px; color: #666; }
+        .content-title { text-align: center; font-size: 18px; font-weight: bold; margin-bottom: 20px; text-transform: uppercase; }
+        .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px; }
+        .signature { margin-top: 60px; text-align: center; width: 200px; margin-left: auto; margin-right: auto; }
+        .signature div { border-top: 1px solid #333; padding-top: 5px; font-size: 14px; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+        th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; }
+        th { background: #1e3a8a; color: white; }
+        .badge { background: #eff6ff; color: #1e40af; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+        .btn { display: none; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="logo-container">
+          <!-- Substituir por <img src="Caminho/Da/Logo.png" /> quando a logo for adicionada aos assets -->
+          ${logo}
+        </div>
+        <div class="header-text">
+          <h1>Sistema de Gestão Hospitalar</h1>
+          <p>Data de Emissão: ${new Date().toLocaleString('pt-BR')}</p>
+          <p>Responsável: ${currentUser ? currentUser.nome : 'Sistema'}</p>
+        </div>
+      </div>
+      <div class="content-title">${subtitulo || titulo}</div>
+      <div class="content">${conteudoHTML}</div>
+      <div class="signature"><div>Assinatura do Responsável</div></div>
+      <div class="footer">
+        CEJAM - Centro de Estudos e Pesquisas "Dr. João Amorim"<br>
+        Este documento é confidencial e protegido por sigilo.
+      </div>
+    </body>
+    </html>
+  `);
   win.document.close();
-  win.print();
+  setTimeout(() => win.print(), 500);
 }
 
 async function exportarPedidoPDF() {
@@ -1405,16 +1608,26 @@ function aplicarFiltroConsumo() {
   // Filtra apenas administrações (saídas reais do estoque) no período
   const dispensadas = STATE.historico.filter(h => {
     if (h.tipo !== 'Administração') return false;
-    if (!h.criado_em) return false;
-    // criado_em pode ser Timestamp Firebase ou string
+    const raw = h.criado_em_raw || h.criado_em;
+    if (!raw) return false;
+    // criado_em_raw preserva o Timestamp Firebase original
     let dt;
-    if (h.criado_em.toDate) {
-      dt = h.criado_em.toDate();
-    } else if (h.criado_em.seconds) {
-      dt = new Date(h.criado_em.seconds * 1000);
+    if (raw.toDate) {
+      dt = raw.toDate();
+    } else if (raw.seconds) {
+      dt = new Date(raw.seconds * 1000);
+    } else if (typeof raw === 'string') {
+      // Tenta parsear string no formato "DD/MM/YYYY HH:MM:SS"
+      const parts = raw.match(/(\d{2})\/(\d{2})\/(\d{4})\s*(\d{2}):(\d{2})/);
+      if (parts) {
+        dt = new Date(parseInt(parts[3]), parseInt(parts[2])-1, parseInt(parts[1]), parseInt(parts[4]), parseInt(parts[5]));
+      } else {
+        dt = new Date(raw);
+      }
     } else {
-      dt = new Date(h.criado_em);
+      dt = new Date(raw);
     }
+    if (isNaN(dt.getTime())) return false;
     return dt >= dtInicio && dt <= dtFim;
   });
 
@@ -1438,9 +1651,15 @@ function aplicarFiltroConsumo() {
 
     // Determina a data do evento para o breakdown diário
     let dt;
-    if (h.criado_em.toDate) dt = h.criado_em.toDate();
-    else if (h.criado_em.seconds) dt = new Date(h.criado_em.seconds * 1000);
-    else dt = new Date(h.criado_em);
+    const raw2 = h.criado_em_raw || h.criado_em;
+    if (raw2.toDate) dt = raw2.toDate();
+    else if (raw2.seconds) dt = new Date(raw2.seconds * 1000);
+    else if (typeof raw2 === 'string') {
+      const parts = raw2.match(/(\d{2})\/(\d{2})\/(\d{4})\s*(\d{2}):(\d{2})/);
+      if (parts) dt = new Date(parseInt(parts[3]), parseInt(parts[2])-1, parseInt(parts[1]), parseInt(parts[4]), parseInt(parts[5]));
+      else dt = new Date(raw2);
+    }
+    else dt = new Date(raw2);
 
     const diaKey = dt.toLocaleDateString('pt-BR'); // ex: "14/05/2026"
     mapa[med].porDia[diaKey] = (mapa[med].porDia[diaKey] || 0) + 1;
@@ -1544,7 +1763,9 @@ function pEnfPainel(){
 }
 
 function pEnfAdm(){
-  let disp = STATE.prescricoes.filter(p => p.status === 'dispensada' || p.status === 'ativa');
+  // Filtra prescrições apenas de pacientes internados (exclui pacientes com alta)
+  const pacientesInternados = STATE.pacientes.filter(p => p.status === 'internado').map(p => p.id);
+  let disp = STATE.prescricoes.filter(p => (p.status === 'dispensada' || p.status === 'ativa') && pacientesInternados.includes(p.pac_id));
   if (_alaTrabalho) {
     disp = disp.filter(p => {
       const ala = getAlaFromPresc(p);
@@ -1578,6 +1799,7 @@ function pEnfAdm(){
       </div>`
     : grouped.map(g => {
       const dispPac = g.items.filter(i => i.status === 'dispensada');
+      const readyPac = dispPac.filter(i => !checkTimingStatus(i.proxima_dose).isEarly);
       return `
       <div class="tcard" style="margin-bottom:20px; border-left: 4px solid var(--purple)">
         <div class="thead-row" style="background: var(--bg2); padding: 12px 16px; border-radius: 8px 8px 0 0; display: flex; align-items: center; gap: 15px;">
@@ -1586,7 +1808,7 @@ function pEnfAdm(){
             <div style="font-weight: 700; color: var(--text1); font-size: 15px;">${g.pac.nome}</div>
             <div style="font-size: 11px; color: var(--text3)">Ala: ${g.pac.ala || '—'} · Alergias: <strong style="color:var(--red)">${g.pac.alergias || 'NKDA'}</strong></div>
           </div>
-          ${dispPac.length > 0 ? `<button class="btn btn-primary btn-sm" onclick="abrirAdmLote('${g.pac.id}')">Administrar Selecionados (${dispPac.length})</button>` : ''}
+          ${readyPac.length > 0 ? `<button class="btn btn-primary btn-sm" onclick="abrirAdmLote('${g.pac.id}')">Administrar Selecionados (${readyPac.length})</button>` : `<span class="badge b-gray" style="font-size:11px">⏳ Aguardando horário</span>`}
         </div>
         <table style="margin:0">
           <thead>
@@ -1605,7 +1827,9 @@ function pEnfAdm(){
               <tr style="${p.status === 'ativa' ? 'opacity:0.6' : ''}">
                 <td>
                   ${p.status === 'dispensada' 
-                    ? `<input type="checkbox" class="check-pac-${g.pac.id}" value="${p.id}" checked ${timing.isEarly ? 'disabled' : ''}>` 
+                    ? (timing.isEarly 
+                      ? `<input type="checkbox" class="check-pac-${g.pac.id}" value="${p.id}" disabled title="Aguarde o horário">` 
+                      : `<input type="checkbox" class="check-pac-${g.pac.id}" value="${p.id}" checked>`) 
                     : '—'}
                 </td>
                 <td>
@@ -1835,6 +2059,183 @@ async function salvarSV() {
     _isSavingSV = false;
     if (btn) btn.textContent = originalText;
   }
+}
+
+// ── TERAPEUTA OCUPACIONAL ──────────────────
+function pToDash() {
+  const ala = _alaTrabalho;
+  const pacsDaAla = STATE.pacientes.filter(p => p.status === 'internado' && (!ala || p.ala === ala));
+  const totalPacs = pacsDaAla.length;
+  const relatsHoje = STATE.relatorios.filter(r => {
+    const hoje = new Date().toLocaleDateString('pt-BR');
+    return r.data === hoje && r.responsavel === currentUser.nome;
+  }).length;
+  const pendentesRelat = pacsDaAla.filter(p => {
+    const hoje = new Date().toLocaleDateString('pt-BR');
+    return !STATE.relatorios.some(r => r.pac_id === p.id && r.data === hoje && r.tipo_relato === 'TO');
+  }).length;
+
+  return `<div class="sec-hdr"><div><div class="sec-title">🧩 Painel Terapeuta Ocupacional</div><div class="sec-sub">Ala ${ala || 'Todas'} — ${totalPacs} pacientes</div></div>
+    <button class="btn btn-primary" onclick="abrirRelatTO(null)">+ Novo Relatório</button></div>
+  <div class="sg4">
+    <div class="stat-card">
+      <div class="stat-label">🏥 Ala Atual</div>
+      <div class="stat-val" style="color:var(--blue); font-size:28px">${ala || '—'}</div>
+      <div class="stat-sub">Ala de atuação</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">👥 Pacientes</div>
+      <div class="stat-val" style="color:var(--green)">${totalPacs}</div>
+      <div class="stat-sub">Internados na ala</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">📝 Relat. Hoje</div>
+      <div class="stat-val" style="color:var(--purple)">${relatsHoje}</div>
+      <div class="stat-sub">Criados por você</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">⏳ Pendentes</div>
+      <div class="stat-val" style="color:${pendentesRelat > 0 ? 'var(--yellow)' : 'var(--green)'}">${pendentesRelat}</div>
+      <div class="stat-sub">Sem relat. TO hoje</div>
+    </div>
+  </div>
+  <div class="tcard">
+    <div class="thead-row"><div class="ttitle">Pacientes — Ala ${ala || 'Todos'}</div></div>
+    <table><thead><tr><th>Paciente</th><th>Ala</th><th>Dias</th><th>Diagnóstico</th><th>Relat. Hoje</th><th>Ação</th></tr></thead>
+    <tbody>${pacsDaAla.length === 0 ? `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3)">Nenhum paciente internado nesta ala</td></tr>` :
+      pacsDaAla.map(p => {
+        const hoje = new Date().toLocaleDateString('pt-BR');
+        const temRelat = STATE.relatorios.some(r => r.pac_id === p.id && r.data === hoje && r.tipo_relato === 'TO');
+        return `<tr>
+          <td><strong>${p.nome}</strong></td><td class="mono">${p.ala}</td>
+          <td>${dBadge(p.admissao)}</td>
+          <td style="font-size:11px">${p.diagnostico}</td>
+          <td>${temRelat ? '<span class="badge b-green">✓ Feito</span>' : '<span class="badge b-yellow">Pendente</span>'}</td>
+          <td><button class="btn btn-primary btn-sm" onclick="abrirRelatTO('${p.id}')">Relatório TO</button></td>
+        </tr>`;
+      }).join('')
+    }</tbody></table>
+  </div>`;
+}
+
+function pToPacs() {
+  const ala = _alaTrabalho;
+  const pacs = STATE.pacientes.filter(p => p.status === 'internado' && (!ala || p.ala === ala));
+  return `<div class="sec-hdr"><div><div class="sec-title">👥 Pacientes da Ala ${ala || ''}</div><div class="sec-sub">${pacs.length} internados</div></div></div>
+  <div class="tcard">
+    <table><thead><tr><th>Paciente</th><th>Ala</th><th>Admissão</th><th>Dias</th><th>Diagnóstico</th><th>Alergias</th><th>Ação</th></tr></thead>
+    <tbody>${pacs.length === 0 ? `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3)">Nenhum paciente nesta ala</td></tr>` :
+      pacs.map(p => `<tr>
+        <td><strong>${p.nome}</strong></td><td class="mono">${p.ala}</td>
+        <td class="mono" style="font-size:10px">${p.admissao}</td>
+        <td>${dBadge(p.admissao)}</td>
+        <td style="font-size:11px">${p.diagnostico}</td>
+        <td class="mono" style="font-size:10px;color:var(--red)">${p.alergias || 'NKDA'}</td>
+        <td><button class="btn btn-primary btn-sm" onclick="abrirRelatTO('${p.id}')">Novo Relat. TO</button>
+            <button class="btn btn-outline btn-sm" onclick="verRelatsTO('${p.id}')">Ver Histórico</button></td>
+      </tr>`).join('')
+    }</tbody></table>
+  </div>`;
+}
+
+function pToRelat() {
+  const ala = _alaTrabalho;
+  // Filtra relatórios TO (tipo_relato = 'TO') da ala atual
+  const todos = STATE.relatorios.filter(r => r.tipo_relato === 'TO' && (!ala || r.ala === ala));
+  const pacs = STATE.pacientes.filter(p => p.status === 'internado' && (!ala || p.ala === ala));
+
+  return `<div class="sec-hdr"><div><div class="sec-title">📝 Relatórios de Terapia Ocupacional</div><div class="sec-sub">Ala ${ala || 'Todas'} — ${todos.length} relatórios</div></div>
+    <button class="btn btn-primary" onclick="abrirRelatTO(null)">+ Novo Relatório</button></div>
+  
+  <!-- Resumo por paciente -->
+  <div class="sg2" style="margin-bottom:20px">
+    ${pacs.map(p => {
+      const relsPac = todos.filter(r => r.pac_id === p.id);
+      const ultimo = relsPac[0];
+      return `<div class="tcard" style="cursor:pointer" onclick="verRelatsTO('${p.id}')">
+        <div class="thead-row">
+          <div class="pac-av" style="width:36px;height:36px;font-size:14px;margin-right:10px">${p.nome.charAt(0).toUpperCase()}</div>
+          <div style="flex:1">
+            <div style="font-weight:600">${p.nome}</div>
+            <div style="font-size:11px;color:var(--text3)">Ala ${p.ala} · ${relsPac.length} relat.</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); abrirRelatTO('${p.id}')">+ Novo</button>
+        </div>
+        ${ultimo ? `<div style="padding:10px 14px; border-top:1px solid var(--border); font-size:12px; color:var(--text2)">
+          <strong>Último:</strong> ${ultimo.data} — <em>${ultimo.evolucao_to || 'Sem descrição'}</em>
+        </div>` : `<div style="padding:10px 14px; border-top:1px solid var(--border); font-size:12px; color:var(--text3)">Nenhum relatório registrado</div>`}
+      </div>`;
+    }).join('') || '<div class="tcard"><div style="text-align:center;padding:30px;color:var(--text3)">Nenhum paciente na ala selecionada</div></div>'}
+  </div>
+
+  <!-- Tabela geral de relatórios TO -->
+  <div class="tcard">
+    <div class="thead-row"><div class="ttitle">Todos os Relatórios TO</div></div>
+    ${todos.length === 0 ? '<div style="text-align:center;padding:30px;color:var(--text3)">Nenhum relatório registrado</div>' :
+    `<table><thead><tr><th>Data</th><th>Paciente</th><th>Ala</th><th>Sessão</th><th>Estado</th><th>Responsável</th><th>Ver</th></tr></thead>
+    <tbody>${todos.map(r => `<tr>
+      <td class="mono" style="font-size:10px">${r.data}</td>
+      <td><strong>${r.pac_nome}</strong></td>
+      <td class="mono">${r.ala}</td>
+      <td style="font-size:11px">${r.tipo_sessao_to || '—'}</td>
+      <td>${estadoBadge(r.estado_geral || 'REG')}</td>
+      <td style="font-size:11px">${r.responsavel}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="verRelatsTO('${r.pac_id}')">Ver</button></td>
+    </tr>`).join('')}</tbody></table>`}
+  </div>`;
+}
+
+function abrirRelatTO(pacId) {
+  const sel = $('r-to-pac');
+  // Popula apenas pacientes da ala do terapeuta
+  const ala = _alaTrabalho;
+  const pacs = STATE.pacientes.filter(p => p.status === 'internado' && (!ala || p.ala === ala));
+  if (sel) {
+    sel.innerHTML = '<option value="">Selecionar...</option>' + pacs.map(p => `<option value="${p.id}">${p.nome} — ${p.ala}</option>`).join('');
+    if (pacId) sel.value = pacId;
+  }
+  om('m-relat-to');
+}
+
+async function salvarRelatTO() {
+  const pacId = $('r-to-pac').value;
+  if (!pacId) { toast('Selecione o paciente', '⚠', 'error'); return; }
+  try {
+    const pac = STATE.pacientes.find(x => x.id === pacId);
+    const relatData = {
+      pac_id: pacId, pac_nome: pac.nome, ala: pac.ala,
+      tipo_relato: 'TO',
+      data: new Date().toLocaleDateString('pt-BR'),
+      tipo_sessao_to: $('r-to-tipo').value,
+      estado_geral: $('r-to-estado').value,
+      evolucao_to: $('r-to-evolucao').value || '',
+      metas_to: $('r-to-metas').value || '',
+      intercorrencias: $('r-to-inter').value || '',
+      responsavel: currentUser.nome,
+      criado_em: fb.serverTimestamp()
+    };
+    await fb.db.collection('relatorios').add(relatData);
+    cm('m-relat-to');
+    toast('Relatório TO salvo!', '🧩', 'ok');
+  } catch(e) { toast('Erro ao salvar relatório TO', '⚠', 'error'); }
+}
+
+function verRelatsTO(pacId) {
+  const p = STATE.pacientes.find(x => x.id === pacId);
+  if (!p) return;
+  const relats = STATE.relatorios.filter(r => r.pac_id === pacId && r.tipo_relato === 'TO');
+  $('verrelat-body').innerHTML = `
+    <div class="pac-hdr"><div class="pac-av">${p.nome[0]}</div>
+    <div><div class="pac-name">${p.nome}</div>
+    <div class="pac-info">Ala ${p.ala} · ${relats.length} relatório(s) TO</div></div></div>
+    ${relats.length === 0 ? '<div style="text-align:center;padding:30px;color:var(--text3)">Nenhum relatório TO para este paciente</div>'
+    : relats.map(r => `<div class="rc">
+      <div class="rc-title">🧩 ${r.data} — ${r.tipo_sessao_to || 'Sessão TO'} ${estadoBadge(r.estado_geral || 'REG')} <span class="badge b-orange">${r.responsavel}</span></div>
+      ${r.evolucao_to ? `<div style="font-size:12px;margin-top:8px"><strong>Evolução:</strong> ${r.evolucao_to}</div>` : ''}
+      ${r.metas_to ? `<div style="font-size:12px;margin-top:6px;color:var(--blue)"><strong>Metas:</strong> ${r.metas_to}</div>` : ''}
+      ${r.intercorrencias ? `<div style="font-size:12px;margin-top:4px;color:var(--yellow)"><strong>Intercorrências:</strong> ${r.intercorrencias}</div>` : ''}
+    </div>`).join('')}`;
+  om('m-verrelat');
 }
 
 // ── ACTIONS ────────────────────────────────
@@ -2119,18 +2520,32 @@ async function confirmarAlta(){
 function checkTimingStatus(proxima_dose) {
   if (!proxima_dose) return { isEarly: false, isLate: false, isLateOver15: false, diffMins: 0 };
   
-  const [hStr, mStr] = proxima_dose.replace('h','').split(':');
-  const targetH = parseInt(hStr, 10);
-  const targetM = parseInt(mStr, 10);
-  
   const now = new Date();
   const target = new Date();
-  target.setHours(targetH, targetM, 0, 0);
   
-  if (target.getTime() > now.getTime() + 12 * 60 * 60 * 1000) {
-    target.setDate(target.getDate() - 1);
-  } else if (target.getTime() < now.getTime() - 12 * 60 * 60 * 1000) {
-    target.setDate(target.getDate() + 1);
+  // Suporta formato "DD/MM HH:MMh" (com data) ou "HH:MMh" (só hora)
+  const fullMatch = proxima_dose.match(/(\d{2})\/(\d{2})\s+(\d{1,2}):(\d{2})/);
+  const timeMatch = proxima_dose.replace('h','').match(/^(\d{1,2}):(\d{2})$/);
+  
+  if (fullMatch) {
+    const targetDay = parseInt(fullMatch[1], 10);
+    const targetMonth = parseInt(fullMatch[2], 10) - 1;
+    const targetH = parseInt(fullMatch[3], 10);
+    const targetM = parseInt(fullMatch[4], 10);
+    target.setMonth(targetMonth, targetDay);
+    target.setHours(targetH, targetM, 0, 0);
+  } else if (timeMatch) {
+    const targetH = parseInt(timeMatch[1], 10);
+    const targetM = parseInt(timeMatch[2], 10);
+    target.setHours(targetH, targetM, 0, 0);
+    
+    if (target.getTime() > now.getTime() + 12 * 60 * 60 * 1000) {
+      target.setDate(target.getDate() - 1);
+    } else if (target.getTime() < now.getTime() - 12 * 60 * 60 * 1000) {
+      target.setDate(target.getDate() + 1);
+    }
+  } else {
+    return { isEarly: false, isLate: false, isLateOver15: false, diffMins: 0 };
   }
   
   const diffMs = now.getTime() - target.getTime();
@@ -2262,9 +2677,12 @@ async function verRelatsPac(pacId){
   const p=STATE.pacientes.find(x=>x.id===pacId);
   const relats=STATE.relatorios.filter(r=>r.pac_id===pacId);
   $('verrelat-body').innerHTML=`
-    <div class="pac-hdr"><div class="pac-av">${p.nome[0]}</div>
-    <div><div class="pac-name">${p.nome}</div>
-    <div class="pac-info">Ala ${p.ala} · ${dias(p.admissao)} dias internado</div></div></div>
+    <div class="pac-hdr">
+      <div class="pac-av">${p.nome[0]}</div>
+      <div><div class="pac-name">${p.nome}</div>
+      <div class="pac-info">Ala ${p.ala} · ${dias(p.admissao)} dias internado</div></div>
+      <div style="margin-left:auto"><button class="btn btn-outline" onclick="imprimirRelatoriosPac('${pacId}')">🖨️ Imprimir</button></div>
+    </div>
     ${relats.length===0?'<div style="text-align:center;padding:30px;color:var(--text3)">Nenhum relatório para este paciente</div>'
     :relats.map(r=>`<div class="rc">
       <div class="rc-title">📝 ${r.data} — ${r.turno} ${estadoBadge(r.estado_geral)} <span class="badge b-purple">${r.responsavel}</span></div>
@@ -2304,6 +2722,36 @@ function verRx(id){
       <button class="btn btn-outline" onclick="imprimirPrescricaoPDF('${p.id}')">🖨️ Imprimir Receituário PDF</button>
     </div>`;
   om('m-rxdet');
+}
+
+function imprimirRelatoriosPac(pacId) {
+  const p = STATE.pacientes.find(x => x.id === pacId);
+  const relats = STATE.relatorios.filter(r => r.pac_id === pacId);
+  
+  let html = `
+    <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #e2e8f0; background: #f8fafc;">
+      <strong>Paciente:</strong> ${p.nome}<br>
+      <strong>Ala:</strong> ${p.ala} | <strong>Dias Internado:</strong> ${dias(p.admissao)}<br>
+      <strong>Diagnóstico:</strong> ${p.diagnostico || '—'}
+    </div>
+  `;
+  
+  if (relats.length === 0) {
+    html += '<p>Nenhum relatório de enfermagem registrado para este paciente.</p>';
+  } else {
+    html += '<table><thead><tr><th>Data / Turno</th><th>Sinais Vitais</th><th>Estado / Responsável</th><th>Evolução</th></tr></thead><tbody>';
+    relats.forEach(r => {
+      html += `<tr>
+        <td style="white-space:nowrap">${r.data}<br>${r.turno}</td>
+        <td style="white-space:nowrap">PA: ${r.pa||'—'}<br>FC: ${r.fc||'—'}<br>T: ${r.temperatura||'—'}<br>SpO2: ${r.spo2||'—'}</td>
+        <td>${r.estado_geral}<br>${r.responsavel}</td>
+        <td>${r.evolucao || '—'} ${r.intercorrencias ? `<br><br><strong>Intercorrências:</strong> ${r.intercorrencias}` : ''}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+  }
+  
+  imprimirHTML('Prontuário Médico', 'Relatório de Enfermagem e Evolução', html);
 }
 
 async function imprimirPrescricaoPDF(id) {
@@ -2464,7 +2912,7 @@ async function iniciarInstalacaoUpdate() {
 // Como o app.js agora é um módulo, precisamos expor as funções para o HTML (onclick)
 Object.assign(window, {
   doLogin, doLogout, handleSearch, handleTopBtn,
-  showPanel, om, cm, salvarPac, salvarRx, salvarAlteracaoRx,
+  showPanel, showFirstPanel, om, cm, salvarPac, salvarRx, salvarAlteracaoRx,
   confirmarAlta, confirmarDispLote, confirmarAdmLote, salvarRelat,
   calcularPedidoFarmacia, imprimirPedido, exportarPedidoPDF,
   filtrarTabelaPacientes,
@@ -2473,7 +2921,8 @@ Object.assign(window, {
   abrirAlterarRx, filtRx, toggleFunc, abrirPerfilFunc, confirmarAlterarSenhaManual,
   salvarNovaSenha, applyTheme, abrirAdm, abrirDisp, limparNotificacoes, marcarLida,
   abrirRelat, verRelatsPac, aplicarFiltroConsumo, salvarAla, toggleAla, abrirSV, salvarSV, abrirDispLote, abrirAdmLote, togglePacCheck, confirmarAlaTrabalho,
-  verificarAtualizacaoManual, iniciarInstalacaoUpdate, abrirNovaPrescricao
+  verificarAtualizacaoManual, iniciarInstalacaoUpdate, abrirNovaPrescricao,
+  abrirRelatTO, salvarRelatTO, verRelatsTO
 });
 
 // Inicialização
